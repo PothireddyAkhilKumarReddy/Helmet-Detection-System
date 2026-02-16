@@ -1,22 +1,30 @@
-# Setup Guide: Training YOLOv8
+# Setup Guide: Training YOLOv8 on Kaggle
 
-## 1. Train Your Model (Using Google Colab)
-Since this project now uses **YOLOv8** for high-accuracy detection, you need to train the model on a GPU.
+## 1. Train Your Model (Using Kaggle)
+We will use **Kaggle** (free GPUs) to train the model.
 
-1.  **Open Google Colab**: Go to [https://colab.research.google.com/](https://colab.research.google.com/).
-2.  **Upload Notebook**: Click "Upload" and select the `Train_YOLOv8.ipynb` file from your project folder.
-3.  **Get Roboflow API Key**:
+1.  **Log in to Kaggle**: Go to [https://www.kaggle.com/](https://www.kaggle.com/).
+2.  **Create New Notebook**: Click **Create > New Notebook**.
+3.  **Upload the Notebook**:
+    *   In the Kaggle notebook editor, go to **File > Import Notebook**.
+    *   Select `Train_YOLOv8_Kaggle.ipynb` from your project folder.
+4.  **Configure Settings** (Important!):
+    *   Open the **Settings** sidebar (right side).
+    *   **Accelerator**: Select **GPU T4 x2**.
+    *   **Internet**: Switch **On**.
+5.  **Get Roboflow API Key**:
     *   Go to [https://app.roboflow.com/settings/api](https://app.roboflow.com/settings/api).
     *   Copy your "Private API Key" (it's free).
-4.  **Run the Notebook**:
-    *   In Colab, go to **Runtime > Run all**.
-    *   When prompted, paste your API Key and press Enter.
-    *   Wait for the training to finish (approx 15-30 minutes).
+6.  **Run**:
+    *   Click **Run All**.
+    *   Enter your API Key when prompted.
 
 ## 2. Download the Model
-Once training is complete, the last cell in the notebook will trigger a download.
-*   **File Name**: `best.pt`
-*   **Location**: It will be in the `runs/detect/train/weights/` folder on Colab if it doesn't download automatically.
+Once training finishes (approx 20 mins):
+1.  Look at the **Output** tab (right sidebar, near Settings).
+2.  Navigate to `/kaggle/working/runs/detect/train/weights/`.
+3.  Find `best.pt`.
+4.  Click the three dots `...` next to it and **Download**.
 
 ## 3. Install the Model
 1.  **Copy** the downloaded `best.pt` file.
