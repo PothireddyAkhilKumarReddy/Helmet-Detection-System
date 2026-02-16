@@ -23,9 +23,30 @@ class LicensePlateDetector:
         contours = sorted(contours, key=cv2.contourArea, reverse=True)[:10]
 
         location = None
+        height, width = image.shape[:2]
+        
         for contour in contours:
-            approx = cv2.approxPolyDP(contour, 10, True)
+            perimeter = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+            
             if len(approx) == 4:
+                # Calculate bounding box (x, y, w, h)
+                (x, y, w, h) = cv2.boundingRect(approx)
+                ar = w / float(h)
+
+                # Filter 1: Aspect Ratio 
+                # Plates are generally rectangular (width > height). 
+                # Heads/Helmets are often square-ish (ar ~ 1).
+                # We expect a plate to be at least slightly wider than tall.
+                if ar < 1.2 or ar > 6.0:
+                    continue
+                
+                # Filter 2: Location 
+                # The license plate is typically in the lower half of the rider's bounding box.
+                # If the y-coordinate is in the top 40%, it's likely a helmet or upper body.
+                if y < height * 0.4:
+                     continue
+
                 location = approx
                 break
 
