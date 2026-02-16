@@ -1,23 +1,28 @@
-# Setup Guide
+# Setup Guide: Training YOLOv8
 
-## 1. Install Dependencies
-I have already installed the required dependencies for you.
+## 1. Train Your Model (Using Google Colab)
+Since this project now uses **YOLOv8** for high-accuracy detection, you need to train the model on a GPU.
 
-## 2. Download Model Weights (CRITICAL)
-The automated download failed because the branch name was incorrect. **Please use these corrected links.**
+1.  **Open Google Colab**: Go to [https://colab.research.google.com/](https://colab.research.google.com/).
+2.  **Upload Notebook**: Click "Upload" and select the `Train_YOLOv8.ipynb` file from your project folder.
+3.  **Get Roboflow API Key**:
+    *   Go to [https://app.roboflow.com/settings/api](https://app.roboflow.com/settings/api).
+    *   Copy your "Private API Key" (it's free).
+4.  **Run the Notebook**:
+    *   In Colab, go to **Runtime > Run all**.
+    *   When prompted, paste your API Key and press Enter.
+    *   Wait for the training to finish (approx 15-30 minutes).
 
-### File 1: Faster R-CNN Model (`frozen_inference_graph.pb`)
-*   **Download Link**: [Click Here to Download frozen_inference_graph.pb](https://github.com/manikanta-varaganti/detection-of-motorcyclists-without-helmet/raw/main/HelmetDetection/rcnn/frozen_inference_graph.pb?download=)
-*   **Target Size**: ~114 MB
-*   **Action**: Download and move to `HelmetDetection/rcnn/frozen_inference_graph.pb` (replace existing small file).
+## 2. Download the Model
+Once training is complete, the last cell in the notebook will trigger a download.
+*   **File Name**: `best.pt`
+*   **Location**: It will be in the `runs/detect/train/weights/` folder on Colab if it doesn't download automatically.
 
-### File 2: YOLO Weights (`yolov3_custom_4000.weights`)
-*   **Download Link**: [Click Here to Download yolov3_custom_4000.weights](https://github.com/manikanta-varaganti/detection-of-motorcyclists-without-helmet/raw/main/HelmetDetection/yolo/yolov3_custom_4000.weights?download=)
-*   **Target Size**: ~246 MB
-*   **Action**: Download and move to `HelmetDetection/yolo/yolov3_custom_4000.weights` (replace existing small file).
+## 3. Install the Model
+1.  **Copy** the downloaded `best.pt` file.
+2.  **Paste** it into your project folder:
+    `c:\Users\akhil\OneDrive\Documents\Academic Projects\Helmet Detection System\`
 
-## 3. Run the System
-After moving the files:
-```bash
-python main.py
-```
+## 4. Run the Web App
+Double-click `run_web_app.bat` to start the interface!
+
