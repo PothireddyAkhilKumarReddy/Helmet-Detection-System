@@ -67,14 +67,26 @@ function uploadFile(file) {
                 resultImg.src = data.result_url;
                 resultArea.classList.remove('hidden');
 
-                // Show Plate Text
+                // Show Plate Text and Image
                 const plateBox = document.getElementById('plate-result');
                 const plateNumber = document.getElementById('plate-number');
+                const plateImg = document.getElementById('plate-crop-img');
 
                 if (plateBox && plateNumber) {
-                    if (data.plate_text && data.plate_text !== "No Plate Detected") {
-                        plateNumber.innerText = data.plate_text;
+                    // Check if we have text OR if we have an image URL
+                    let hasText = (data.plate_text && data.plate_text !== "No Plate Detected");
+                    let hasImage = (data.plate_url && data.plate_url.length > 0);
+
+                    if (hasText || hasImage) {
+                        plateNumber.innerText = hasText ? `"${data.plate_text}"` : "Text not recognized";
                         plateBox.classList.remove('hidden');
+
+                        if (hasImage) {
+                            plateImg.src = data.plate_url;
+                            plateImg.classList.remove('hidden');
+                        } else {
+                            plateImg.classList.add('hidden');
+                        }
                     } else {
                         plateBox.classList.add('hidden');
                     }

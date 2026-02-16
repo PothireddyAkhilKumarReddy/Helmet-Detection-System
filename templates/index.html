@@ -41,7 +41,11 @@
                     <img id="result-img" src="" alt="Detection Result">
                 </div>
                 <div id="plate-result" class="plate-box hidden">
-                    <p>License Plate: <span id="plate-number"></span></p>
+                    <h3>License Plate Details</h3>
+                    <div class="plate-display">
+                        <img id="plate-crop-img" src="" alt="Cropped Plate" class="hidden">
+                        <p>Detected Number : <span id="plate-number"></span></p>
+                    </div>
                 </div>
                 <button class="btn-reset" onclick="resetApp()">Analyze Another</button>
             </div>

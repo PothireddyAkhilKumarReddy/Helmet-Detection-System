@@ -132,6 +132,8 @@ class HelmetSystem:
         boxes, scores, classes = self.detect_riders(image)
         detected_texts = []
 
+        last_plate_img = None
+        
         for i in range(len(boxes)):
             if scores[i] > MIN_SCORE_THRESH:
                 ymin, xmin, ymax, xmax = boxes[i]
@@ -159,6 +161,7 @@ class HelmetSystem:
                             # Attempt Plate Detection
                             plate_img, plate_rect = self.plate_detector.detect_plate(rider_img)
                             if plate_img is not None:
+                                last_plate_img = plate_img
                                 text = self.plate_detector.recognize_text(plate_img)
                                 if text:
                                     detected_texts.append(text)
@@ -169,7 +172,8 @@ class HelmetSystem:
                                 px += l
                                 py += t
                                 cv2.rectangle(image, (px, py), (px + pw, py + ph), (255, 0, 0), 2)
-                                cv2.putText(image, text, (px, py - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                                if text:
+                                    cv2.putText(image, text, (px, py - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                         else:
                             # Helmet Detected
                             cv2.rectangle(image, (l, t), (r, b), (0, 255, 0), 2)
@@ -178,15 +182,23 @@ class HelmetSystem:
         # Save output
         if output_dir:
              output_path = os.path.join(output_dir, "output_" + os.path.basename(image_path))
+             plate_crop_path = os.path.join(output_dir, "plate_" + os.path.basename(image_path))
         else:
              output_path = "output_" + os.path.basename(image_path)
+             plate_crop_path = "plate_" + os.path.basename(image_path)
              
         cv2.imwrite(output_path, image)
         print(f"[INFO] Saved result to {output_path}")
+
+        # Save the last detected plate crop if available
+        final_plate_path = None
+        if last_plate_img is not None:
+             cv2.imwrite(plate_crop_path, last_plate_img)
+             final_plate_path = plate_crop_path
         
         # Collect all detected texts
-        full_text = " | ".join(detected_texts) if detected_texts else "No Plate Detected"
-        return output_path, full_text
+        full_text = " | ".join(detected_texts) if detected_texts else None
+        return output_path, full_text, final_plate_path
 
 if __name__ == "__main__":
     if not check_lfs_files():

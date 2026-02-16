@@ -50,18 +50,26 @@ def detect():
         try:
             result = system.process_image(filepath, output_dir=app.config['RESULTS_FOLDER'])
             
-            if isinstance(result, tuple):
+            # Handle variable return values just in case
+            if isinstance(result, tuple) and len(result) == 3:
+                output_path, plate_text, plate_crop_path = result
+            elif isinstance(result, tuple) and len(result) == 2:
                 output_path, plate_text = result
+                plate_crop_path = None
             else:
                 output_path = result
-                plate_text = "No Plate Detected"
+                plate_text = None
+                plate_crop_path = None
 
             if output_path:
                 output_filename = os.path.basename(output_path)
+                plate_filename = os.path.basename(plate_crop_path) if plate_crop_path else None
+                
                 return jsonify({
                     'success': True,
                     'result_url': f'/results/{output_filename}',
-                    'plate_text': plate_text
+                    'plate_text': plate_text if plate_text else "No Plate Detected",
+                    'plate_url': f'/results/{plate_filename}' if plate_filename else None
                 })
             else:
                 return jsonify({'error': 'Detection failed to produce output'}), 500
