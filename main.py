@@ -50,14 +50,13 @@ class YOLOv8System:
             # Note: Checking strings is safer than IDs since user datasets vary.
             lbl_lower = label.lower()
             
-            if "no" in lbl_lower and "helmet" in lbl_lower: # no-helmet
-                color = (0, 0, 255) # Red for violation
-                print(f"[VIOLATION] No Helmet detected! ({conf:.2f})")
-            elif "plate" in lbl_lower:
-                color = (255, 0, 0) # Blue for plate
-                
+            is_violation = False
+            
+            if "plate" in lbl_lower or "license" in lbl_lower:
                 # License Plate Logic
                 if conf > 0.2: 
+                    color = (255, 0, 0) # Blue for plate
+                    
                     # Crop plate
                     plate_crop = img[y1:y2, x1:x2]
                     
@@ -73,6 +72,26 @@ class YOLOv8System:
                         plate_filename = f"plate_{os.path.basename(image_path)}"
                         final_plate_path = os.path.join(output_dir, plate_filename)
                         cv2.imwrite(final_plate_path, plate_crop)
+
+            elif "helmet" in lbl_lower:
+                # Check for negative prefixes
+                if "no" in lbl_lower or "without" in lbl_lower or "missing" in lbl_lower or "not" in lbl_lower:
+                     is_violation = True
+                     print(f"[VIOLATION] No Helmet detected! ({conf:.2f})")
+                else:
+                     # "helmet" or "with helmet" -> safe
+                     pass
+
+            elif "head" in lbl_lower:
+                # If the class is "Head", it usually means NO helmet
+                if "helmet" not in lbl_lower:
+                    is_violation = True
+                    print(f"[VIOLATION] Head detected (likely no helmet)! ({conf:.2f})")
+
+            # Apply violation color
+            if is_violation:
+                color = (0, 0, 255) # Red
+                label = "NO HELMET" # Force label update for clarity
 
             # Draw Box & Label
             cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
