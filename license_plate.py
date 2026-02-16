@@ -20,7 +20,7 @@ class LicensePlateDetector:
         # Find contours
         keypoints = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = imutils.grab_contours(keypoints)
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:10]
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
 
         location = None
         height, width = image.shape[:2]
@@ -34,18 +34,19 @@ class LicensePlateDetector:
                 (x, y, w, h) = cv2.boundingRect(approx)
                 ar = w / float(h)
 
-                # Filter 1: Aspect Ratio 
-                # Plates are generally rectangular (width > height). 
-                # Heads/Helmets are often square-ish (ar ~ 1).
-                # We expect a plate to be at least slightly wider than tall.
-                if ar < 1.2 or ar > 6.0:
-                    continue
-                
-                # Filter 2: Location 
-                # The license plate is typically in the lower half of the rider's bounding box.
-                # If the y-coordinate is in the top 40%, it's likely a helmet or upper body.
-                if y < height * 0.4:
+                # Filter 1: Location 
+                # This is the most robust filter.
+                # A License Plate on a bike is almost ALWAYS in the lower half (or at least lower 60%) of the rider crop.
+                # A Head/Helmet is ALWAYS in the top portion.
+                # Grid logic: reject if the center of the box is in the top 30% of the image
+                center_y = y + h / 2
+                if center_y < height * 0.3:
                      continue
+                
+                # Filter 2: Aspect Ratio
+                # Relaxed to allow square-ish plates (obscured or angled) but remove extremely thin noise
+                if ar < 0.5 or ar > 8.0:
+                    continue
 
                 location = approx
                 break
