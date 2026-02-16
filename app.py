@@ -48,7 +48,14 @@ def detect():
         
         # Process Image
         try:
-            output_path, plate_text = system.process_image(filepath, output_dir=app.config['RESULTS_FOLDER'])
+            result = system.process_image(filepath, output_dir=app.config['RESULTS_FOLDER'])
+            
+            if isinstance(result, tuple):
+                output_path, plate_text = result
+            else:
+                output_path = result
+                plate_text = "No Plate Detected"
+
             if output_path:
                 output_filename = os.path.basename(output_path)
                 return jsonify({
