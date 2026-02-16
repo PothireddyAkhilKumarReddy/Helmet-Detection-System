@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-from main import HelmetSystem, check_lfs_files
+from main import YOLOv8System, check_lfs_files
 import sys
 
 # Initialize Flask App
@@ -25,7 +25,7 @@ if not check_lfs_files():
     print("[ERROR] Model files are missing or invalid (LFS pointers). Please download real weights.")
     sys.exit(1)
 
-system = HelmetSystem()
+system = YOLOv8System()
 print("[INFO] System Ready.")
 
 @app.route('/')
