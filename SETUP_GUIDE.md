@@ -1,30 +1,27 @@
-# Setup Guide: Training YOLOv8 on Kaggle
+# Setup Guide: Training YOLOv8 (Colab + Kaggle Dataset)
 
-## 1. Train Your Model (Using Kaggle)
-We will use **Kaggle** (free GPUs) to train the model.
+## 1. Train Your Model (Using Google Colab)
+We will use **Google Colab** to train the model, but we will use a dataset from **Kaggle**.
 
-1.  **Log in to Kaggle**: Go to [https://www.kaggle.com/](https://www.kaggle.com/).
-2.  **Create New Notebook**: Click **Create > New Notebook**.
-3.  **Upload the Notebook**:
-    *   In the Kaggle notebook editor, go to **File > Import Notebook**.
-    *   Select `Train_YOLOv8_Kaggle.ipynb` from your project folder.
-4.  **Configure Settings** (Important!):
-    *   Open the **Settings** sidebar (right side).
-    *   **Accelerator**: Select **GPU T4 x2**.
-    *   **Internet**: Switch **On**.
-5.  **Get Roboflow API Key**:
-    *   Go to [https://app.roboflow.com/settings/api](https://app.roboflow.com/settings/api).
-    *   Copy your "Private API Key" (it's free).
-6.  **Run**:
-    *   Click **Run All**.
-    *   Enter your API Key when prompted.
+1.  **Open Google Colab**: Go to [https://colab.research.google.com/](https://colab.research.google.com/).
+2.  **Upload Notebook**: Click "Upload" and select the `Train_YOLOv8_KaggleDataset.ipynb` file.
+3.  **Get Kaggle API Key** (Required to download dataset):
+    *   Log in to [Kaggle](https://www.kaggle.com/).
+    *   Go to **Settings** > **Account** > **Create New API Token**.
+    *   This will download a `kaggle.json` file. Keep it ready.
+4.  **Find a Dataset**:
+    *   Search Kaggle for "Helmet Number Plate YOLOv8".
+    *   Copy the **Dataset Slug** (e.g., `simranvol/helmet-number-plate-detection`).
+5.  **Run the Notebook**:
+    *   In Colab, click **Runtime > Run all**.
+    *   **Upload `kaggle.json`** when the cell asks for it.
+    *   **Paste the Dataset Slug** when prompted.
+    *   Wait for training to finish.
 
 ## 2. Download the Model
-Once training finishes (approx 20 mins):
-1.  Look at the **Output** tab (right sidebar, near Settings).
-2.  Navigate to `/kaggle/working/runs/detect/train/weights/`.
-3.  Find `best.pt`.
-4.  Click the three dots `...` next to it and **Download**.
+Once training is complete, the last cell in the notebook will trigger a download.
+*   **File Name**: `best.pt`
+*   **Location**: It will be in the folders on the left: `runs/detect/train/weights/`.
 
 ## 3. Install the Model
 1.  **Copy** the downloaded `best.pt` file.
