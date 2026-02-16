@@ -48,12 +48,13 @@ def detect():
         
         # Process Image
         try:
-            output_path = system.process_image(filepath, output_dir=app.config['RESULTS_FOLDER'])
+            output_path, plate_text = system.process_image(filepath, output_dir=app.config['RESULTS_FOLDER'])
             if output_path:
                 output_filename = os.path.basename(output_path)
                 return jsonify({
                     'success': True,
-                    'result_url': f'/results/{output_filename}'
+                    'result_url': f'/results/{output_filename}',
+                    'plate_text': plate_text
                 })
             else:
                 return jsonify({'error': 'Detection failed to produce output'}), 500

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +13,7 @@
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
 </head>
+
 <body>
 
     <div class="container">
@@ -38,6 +40,9 @@
                 <div class="image-wrapper">
                     <img id="result-img" src="" alt="Detection Result">
                 </div>
+                <div id="plate-result" class="plate-box hidden">
+                    <p>License Plate: <span id="plate-number"></span></p>
+                </div>
                 <button class="btn-reset" onclick="resetApp()">Analyze Another</button>
             </div>
         </main>
@@ -45,4 +50,5 @@
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>

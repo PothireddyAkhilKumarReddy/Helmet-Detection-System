@@ -66,6 +66,19 @@ function uploadFile(file) {
             if (data.success) {
                 resultImg.src = data.result_url;
                 resultArea.classList.remove('hidden');
+
+                // Show Plate Text
+                const plateBox = document.getElementById('plate-result');
+                const plateNumber = document.getElementById('plate-number');
+
+                if (plateBox && plateNumber) {
+                    if (data.plate_text && data.plate_text !== "No Plate Detected") {
+                        plateNumber.innerText = data.plate_text;
+                        plateBox.classList.remove('hidden');
+                    } else {
+                        plateBox.classList.add('hidden');
+                    }
+                }
             } else {
                 alert('Error: ' + data.error);
                 resetApp();
@@ -85,4 +98,6 @@ function resetApp() {
     resultImg.src = '';
     // reset file input
     document.getElementById('fileElem').value = '';
+    const plateBox = document.getElementById('plate-result');
+    if (plateBox) plateBox.classList.add('hidden');
 }

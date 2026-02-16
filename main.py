@@ -130,6 +130,7 @@ class HelmetSystem:
 
         im_height, im_width, _ = image.shape
         boxes, scores, classes = self.detect_riders(image)
+        detected_texts = []
 
         for i in range(len(boxes)):
             if scores[i] > MIN_SCORE_THRESH:
@@ -159,6 +160,8 @@ class HelmetSystem:
                             plate_img, plate_rect = self.plate_detector.detect_plate(rider_img)
                             if plate_img is not None:
                                 text = self.plate_detector.recognize_text(plate_img)
+                                if text:
+                                    detected_texts.append(text)
                                 print(f"[LICENSE PLATE] Detected: {text}")
                                 
                                 # Draw plate info
@@ -180,7 +183,10 @@ class HelmetSystem:
              
         cv2.imwrite(output_path, image)
         print(f"[INFO] Saved result to {output_path}")
-        return output_path
+        
+        # Collect all detected texts
+        full_text = " | ".join(detected_texts) if detected_texts else "No Plate Detected"
+        return output_path, full_text
 
 if __name__ == "__main__":
     if not check_lfs_files():
