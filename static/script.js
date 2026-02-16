@@ -71,13 +71,24 @@ function uploadFile(file) {
                 const plateBox = document.getElementById('plate-result');
                 const plateNumber = document.getElementById('plate-number');
                 const plateImg = document.getElementById('plate-crop-img');
+                const statusText = document.getElementById('helmet-status');
 
                 if (plateBox && plateNumber) {
                     // Check if we have text OR if we have an image URL
                     let hasText = (data.plate_text && data.plate_text !== "No Plate Detected");
                     let hasImage = (data.plate_url && data.plate_url.length > 0);
 
-                    if (hasText || hasImage) {
+                    // Update Status
+                    if (statusText) {
+                        statusText.innerText = data.status_text || "Unknown";
+                        if (data.status_text && data.status_text.includes("NO HELMET")) {
+                            statusText.style.color = "red";
+                        } else {
+                            statusText.style.color = "#00ff00"; // Green
+                        }
+                    }
+
+                    if (hasText || hasImage || data.status_text) {
                         plateNumber.innerText = hasText ? `"${data.plate_text}"` : "Text not recognized";
                         plateBox.classList.remove('hidden');
 

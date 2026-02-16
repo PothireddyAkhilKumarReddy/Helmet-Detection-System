@@ -36,6 +36,9 @@ class YOLOv8System:
         # We need to map class IDs to names
         # Standard YOLOv8 training usually assigns indices automatically.
         # We should check class names.
+        # Track overall status
+        violation_detected = False
+        helmet_detected = False
         
         for box in results.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -45,6 +48,10 @@ class YOLOv8System:
             
             # Draw bounding box logic
             color = (0, 255, 0) # Green default
+            
+            # Check for specific classes. 
+            # Note: Checking strings is safer than IDs since user datasets vary.
+            lbl_lower = label.lower()
             
             # Check for specific classes. 
             # Note: Checking strings is safer than IDs since user datasets vary.
@@ -76,16 +83,24 @@ class YOLOv8System:
             elif "helmet" in lbl_lower:
                 # Check for negative prefixes
                 if "no" in lbl_lower or "without" in lbl_lower or "missing" in lbl_lower or "not" in lbl_lower:
+                     # "No Helmet" is a specific class, usually reliable
                      is_violation = True
+                     violation_detected = True
                      print(f"[VIOLATION] No Helmet detected! ({conf:.2f})")
                 else:
-                     # "helmet" or "with helmet" -> safe
-                     pass
+                     # "helmet" or "with helmet"
+                     # STRICT FILTER: Only accept if confidence is HIGH (>0.7)
+                     # This reduces false positives where hair is detected as a helmet
+                     if conf > 0.7:
+                         helmet_detected = True
+                     else:
+                         print(f"[IGNORED] Weak Helmet detection ({conf:.2f}), treating as potentially unsafe.")
 
             elif "head" in lbl_lower:
                 # If the class is "Head", it usually means NO helmet
                 if "helmet" not in lbl_lower:
                     is_violation = True
+                    violation_detected = True
                     print(f"[VIOLATION] Head detected (likely no helmet)! ({conf:.2f})")
 
             # Apply violation color
@@ -106,7 +121,15 @@ class YOLOv8System:
 
         full_text = " | ".join(detected_texts) if detected_texts else "No Text Detected"
         
-        return output_path, full_text, final_plate_path
+        # Determine final status string
+        if violation_detected:
+            status_text = "NO HELMET (Violation)"
+        elif helmet_detected:
+            status_text = "With Helmet (Safe)"
+        else:
+            status_text = "No Rider/Helmet Detected"
+
+        return output_path, full_text, final_plate_path, status_text
 
 def check_lfs_files():
     # Placeholder for compatibility if app.py calls it
