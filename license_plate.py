@@ -14,49 +14,68 @@ class LicensePlateDetector:
         Returns the cropped plate image and its coordinates (x, y, w, h).
         """
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray = cv2.bilateralFilter(gray, 11, 17, 17) # Noise reduction
-        edged = cv2.Canny(gray, 30, 200) # Edge detection
+        # Morphological operations to connect characters/edges
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
 
-        # Find contours
-        keypoints = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Find contours on the closed image
+        keypoints = cv2.findContours(closed.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = imutils.grab_contours(keypoints)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
 
         location = None
         height, width = image.shape[:2]
-        plate_img = None
-        plate_rect = None
+        
+        best_candidate = None
+        best_score = -1
         
         for contour in contours:
-            # Get the bounding rect immediately, don't rely on 4-point polygon
+            # Get the bounding rect
             (x, y, w, h) = cv2.boundingRect(contour)
             ar = w / float(h)
             area = w * h
 
             # Filter 1: Position 
-            # Plate must be in the lower part of the rider (avoid heads/torso)
-            # Center of box should be in the lower 60% of the image (y > 0.4 * height)
+            # Stricter: Center of box MUST be in the lower 50% of the image
             center_y = y + h / 2
-            if center_y < height * 0.4:
+            if center_y < height * 0.5:
                  continue
             
             # Filter 2: Aspect Ratio
-            # Plates are rectangular. Allow some square-ness for angles, but generally wide.
-            if ar < 0.8 or ar > 8.0:
+            if ar < 1.0 or ar > 6.0:
                 continue
 
             # Filter 3: Minimum size (relative to rider crop)
-            # It shouldn't be microscopic noise
-            if area < 100: 
+            if area < 500: 
+                continue
+            
+            # Filter 4: Edge Density (Texture Check)
+            # Plates have text => High edge density.
+            # Arms/Clothes => Low edge density.
+            roi = edged[y:y+h, x:x+w]
+            edge_density = cv2.countNonZero(roi) / (w * h)
+            
+            # If less than 15% of the box is edges, it's likely smooth skin/cloth, not a plate
+            if edge_density < 0.15:
                 continue
 
-            # If we passed filters, assume this is the plate (since we sorted by area, largest valid rect wins)
-            # We add a small padding usually, but here we scan directly.
+            # Score the candidate
+            # Score = Area * Density * Position_Low
+            # We want large areas, high density (text), and lower position
+            position_score = center_y / height # Higher is better (lower in image)
+            score = area * edge_density * position_score
+            
+            if score > best_score:
+                best_score = score
+                best_candidate = (x, y, w, h)
+
+        if best_candidate:
+            (x, y, w, h) = best_candidate
             plate_img = image[y:y+h, x:x+w]
             plate_rect = (x, y, w, h)
-            break
+            return plate_img, plate_rect
             
-        return plate_img, plate_rect
+        return None, None
 
     def maximize_contrast(self, img):
         # Increase contrast for better OCR
