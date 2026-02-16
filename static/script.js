@@ -1,0 +1,88 @@
+const dropArea = document.getElementById('drop-area');
+const loader = document.getElementById('loader');
+const resultArea = document.getElementById('result-area');
+const resultImg = document.getElementById('result-img');
+
+// Prevent default drag behaviors
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+});
+
+// Highlight drop area when item is dragged over it
+['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, unhighlight, false);
+});
+
+// Handle dropped files
+dropArea.addEventListener('drop', handleDrop, false);
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function highlight(e) {
+    dropArea.classList.add('highlight');
+}
+
+function unhighlight(e) {
+    dropArea.classList.remove('highlight');
+}
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    handleFiles(files);
+}
+
+function handleFiles(files) {
+    if (files.length > 0) {
+        uploadFile(files[0]);
+    }
+}
+
+function uploadFile(file) {
+    let url = '/detect';
+    let formData = new FormData();
+
+    formData.append('file', file);
+
+    // Initial UI State
+    dropArea.classList.add('hidden');
+    loader.classList.remove('hidden');
+
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            loader.classList.add('hidden');
+            if (data.success) {
+                resultImg.src = data.result_url;
+                resultArea.classList.remove('hidden');
+            } else {
+                alert('Error: ' + data.error);
+                resetApp();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            loader.classList.add('hidden');
+            alert('An error occurred during processing.');
+            resetApp();
+        });
+}
+
+function resetApp() {
+    resultArea.classList.add('hidden');
+    dropArea.classList.remove('hidden');
+    resultImg.src = '';
+    // reset file input
+    document.getElementById('fileElem').value = '';
+}
