@@ -9,13 +9,10 @@ We will use **Google Colab** to train the model, but we will use a dataset from 
     *   Log in to [Kaggle](https://www.kaggle.com/).
     *   Go to **Settings** > **Account** > **Create New API Token**.
     *   This will download a `kaggle.json` file. Keep it ready.
-4.  **Find a Dataset**:
-    *   Search Kaggle for "Helmet Number Plate YOLOv8".
-    *   Copy the **Dataset Slug** (e.g., `simranvol/helmet-number-plate-detection`).
-5.  **Run the Notebook**:
+4.  **Run the Notebook**:
     *   In Colab, click **Runtime > Run all**.
     *   **Upload `kaggle.json`** when the cell asks for it.
-    *   **Paste the Dataset Slug** when prompted.
+    *   **Press Enter** when asked for the Dataset Slug (I selected one for you).
     *   Wait for training to finish.
 
 ## 2. Download the Model
