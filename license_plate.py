@@ -75,7 +75,17 @@ class LicensePlateDetector:
             return ""
 
         # Enhance image for OCR
-        # plate_image = self.maximize_contrast(plate_image) # Optional: can enable if needed
+        # 1. Resize: Upscale to make characters larger/clearer
+        scale = 2.0
+        plate_image = cv2.resize(plate_image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        
+        # 2. Contrast: Maximize contrast (optional, but often helps)
+        # plate_image = self.maximize_contrast(plate_image) 
+        
+        # 3. Grayscale + Thresholding (Binarization)
+        # This helps EasyOCR focus on black chars on white plate (or vice versa)
+        # plate_image_gray = cv2.cvtColor(plate_image, cv2.COLOR_BGR2GRAY) if len(plate_image.shape) == 3 else plate_image
+        # _, plate_image = cv2.threshold(plate_image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
         result = self.reader.readtext(plate_image)
         
