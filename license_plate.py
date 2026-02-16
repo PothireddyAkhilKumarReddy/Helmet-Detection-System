@@ -24,49 +24,39 @@ class LicensePlateDetector:
 
         location = None
         height, width = image.shape[:2]
+        plate_img = None
+        plate_rect = None
         
         for contour in contours:
-            perimeter = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+            # Get the bounding rect immediately, don't rely on 4-point polygon
+            (x, y, w, h) = cv2.boundingRect(contour)
+            ar = w / float(h)
+            area = w * h
+
+            # Filter 1: Position 
+            # Plate must be in the lower part of the rider (avoid heads/torso)
+            # Center of box should be in the lower 60% of the image (y > 0.4 * height)
+            center_y = y + h / 2
+            if center_y < height * 0.4:
+                 continue
             
-            if len(approx) == 4:
-                # Calculate bounding box (x, y, w, h)
-                (x, y, w, h) = cv2.boundingRect(approx)
-                ar = w / float(h)
+            # Filter 2: Aspect Ratio
+            # Plates are rectangular. Allow some square-ness for angles, but generally wide.
+            if ar < 0.8 or ar > 8.0:
+                continue
 
-                # Filter 1: Location 
-                # This is the most robust filter.
-                # A License Plate on a bike is almost ALWAYS in the lower half (or at least lower 60%) of the rider crop.
-                # A Head/Helmet is ALWAYS in the top portion.
-                # Grid logic: reject if the center of the box is in the top 30% of the image
-                center_y = y + h / 2
-                if center_y < height * 0.3:
-                     continue
-                
-                # Filter 2: Aspect Ratio
-                # Relaxed to allow square-ish plates (obscured or angled) but remove extremely thin noise
-                if ar < 0.5 or ar > 8.0:
-                    continue
+            # Filter 3: Minimum size (relative to rider crop)
+            # It shouldn't be microscopic noise
+            if area < 100: 
+                continue
 
-                location = approx
-                break
-
-        if location is None:
-            return None, None 
-
-        mask = np.zeros(gray.shape, np.uint8)
-        new_image = cv2.drawContours(mask, [location], 0, 255, -1)
-        new_image = cv2.bitwise_and(image, image, mask=mask)
-
-        (x, y) = np.where(mask == 255)
-        (x1, y1) = (np.min(x), np.min(y))
-        (x2, y2) = (np.max(x), np.max(y))
-        cropped_image = gray[x1:x2+1, y1:y2+1]
-
-        # Calculate bounding box (x, y, w, h) for display
-        x_rect, y_rect, w_rect, h_rect = cv2.boundingRect(location)
-        
-        return cropped_image, (x_rect, y_rect, w_rect, h_rect)
+            # If we passed filters, assume this is the plate (since we sorted by area, largest valid rect wins)
+            # We add a small padding usually, but here we scan directly.
+            plate_img = image[y:y+h, x:x+w]
+            plate_rect = (x, y, w, h)
+            break
+            
+        return plate_img, plate_rect
 
     def maximize_contrast(self, img):
         # Increase contrast for better OCR
