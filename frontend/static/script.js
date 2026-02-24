@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start real-time clock
     setInterval(updateTime, 1000);
 
+    // Fetch initial database analytics state
+    fetchDashboardStats();
+    fetchDashboardHistory();
+
     // Bind file input change event for "Browse Files" clicking
     const fileInputEl = document.getElementById('file-input');
     if (fileInputEl) {
@@ -63,21 +67,57 @@ function updateTime() {
     }
 }
 
-// Real-time metrics tracking
-function incrementRealScans() {
-    const scansEl = document.getElementById('today-scans');
-    if (scansEl) {
-        let current = parseInt(scansEl.innerText.replace(/,/g, ''));
-        scansEl.innerText = (current + 1).toLocaleString();
-    }
+// Real-time metrics fetching from API
+function fetchDashboardStats() {
+    fetch('/api/analytics/stats')
+        .then(res => res.json())
+        .then(data => {
+            const scansEl = document.getElementById('today-scans');
+            if (scansEl) scansEl.innerText = data.total_scans.toLocaleString();
+
+            const violationsEl = document.getElementById('violations-count');
+            if (violationsEl) violationsEl.innerText = data.total_violations.toLocaleString();
+
+            const accuracyEl = document.getElementById('system-accuracy');
+            if (accuracyEl) accuracyEl.innerText = data.accuracy.toFixed(1) + '%';
+        })
+        .catch(err => console.error("Error fetching stats:", err));
 }
 
-function incrementRealViolations() {
-    const violationsEl = document.getElementById('violations-count');
-    if (violationsEl) {
-        let currentVio = parseInt(violationsEl.innerText.replace(/,/g, ''));
-        violationsEl.innerText = (currentVio + 1).toLocaleString();
-    }
+function fetchDashboardHistory() {
+    fetch('/api/analytics/history')
+        .then(res => res.json())
+        .then(data => {
+            const tableBody = document.getElementById('recent-detections-body');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            data.forEach(item => {
+                const timeStr = item.timestamp.split(' ')[1].substring(0, 5); // Extract HH:MM
+                const statusText = item.status_text || "Unknown";
+
+                let badgeClass = "badge-safe";
+                if (statusText.includes("NO HELMET")) badgeClass = "badge-danger";
+
+                let plateStr = item.plate_text && item.plate_text !== "No Plate Detected" ? item.plate_text : "--";
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${timeStr}</td>
+                    <td>
+                        <div style="width: 40px; height: 40px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color);">
+                            <img src="${item.result_url}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                    </td>
+                    <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                    <td>${plateStr}</td>
+                    <td><button class="icon-btn"><i class="ph ph-dots-three-outline"></i></button></td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        })
+        .catch(err => console.error("Error fetching history:", err));
 }
 
 // Drag & Drop Handling
@@ -221,45 +261,9 @@ function updateDashboard(data) {
     // Reveal the dashboard grid
     resultArea.style.display = 'block';
 
-    // 4. Update Recent Activity Table
-    addRecentDetection(data);
-
-    // 5. Update KPI Counters with real data
-    incrementRealScans();
-    if (statusText.includes("NO HELMET")) {
-        incrementRealViolations();
-    }
-}
-
-function addRecentDetection(data) {
-    const tableBody = document.getElementById('recent-detections-body');
-    if (!tableBody) return;
-
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const statusText = data.status_text || "Unknown";
-
-    let badgeClass = "badge-safe";
-    if (statusText.includes("NO HELMET")) {
-        badgeClass = "badge-danger";
-    }
-
-    let plateStr = data.plate_text && data.plate_text !== "No Plate Detected" ? data.plate_text : "--";
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td>${timeStr}</td>
-        <td>
-            <div style="width: 40px; height: 40px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color);">
-                <img src="${data.result_url}" style="width: 100%; height: 100%; object-fit: cover;">
-            </div>
-        </td>
-        <td><span class="badge ${badgeClass}">${statusText}</span></td>
-        <td>${plateStr}</td>
-        <td><button class="icon-btn"><i class="ph ph-dots-three-outline"></i></button></td>
-    `;
-
-    // Add new row to the top of the table
-    tableBody.prepend(tr);
+    // 4. Update Recent Activity Table and KPIs from Database Source of Truth
+    fetchDashboardStats();
+    fetchDashboardHistory();
 }
 
 function resetApp() {

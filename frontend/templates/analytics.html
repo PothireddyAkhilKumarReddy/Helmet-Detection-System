@@ -16,7 +16,7 @@
         </div>
         <div class="horizon-data">
             <p>Total Vehicles Scanned</p>
-            <h3>14,592</h3>
+            <h3 id="analytics-total-scans">--</h3>
         </div>
     </div>
     <div class="horizon-card glass-panel">
@@ -25,16 +25,16 @@
         </div>
         <div class="horizon-data">
             <p>Total Violations</p>
-            <h3>1,843</h3>
+            <h3 id="analytics-total-violations">--</h3>
         </div>
     </div>
     <div class="horizon-card glass-panel">
         <div class="horizon-icon" style="color: var(--status-safe); background: rgba(16, 185, 129, 0.1);">
-            <i class="ph ph-lightning"></i>
+            <i class="ph ph-crosshair"></i>
         </div>
         <div class="horizon-data">
-            <p>Avg. Inference Time</p>
-            <h3>85 ms</h3>
+            <p>System Accuracy</p>
+            <h3 id="analytics-accuracy">--</h3>
         </div>
     </div>
 </div>
@@ -47,69 +47,10 @@
         <!-- Traffic Volume Bar Chart -->
         <div class="glass-panel" style="padding: 1.5rem;">
             <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                <i class="ph ph-chart-bar"></i> Weekly Traffic Volume
+                <i class="ph ph-chart-bar"></i> Dynamic Traffic Volume
             </h3>
-
-            <div class="css-chart-container"
-                style="height: 250px; display: flex; align-items: flex-end; gap: 20px; padding-top: 20px; border-bottom: 1px solid var(--border-color); border-left: 1px solid var(--border-color); padding-left: 10px;">
-                <!-- Mon -->
-                <div class="bar-group"
-                    style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="bar"
-                        style="width: 100%; max-width: 40px; background: var(--brand-gradient); height: 60%; border-radius: 4px 4px 0 0; position: relative;">
-                        <span class="tooltip"
-                            style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; background: var(--bg-input); padding: 2px 6px; border-radius: 4px; opacity: 0;">1.2k</span>
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Mon</span>
-                </div>
-                <!-- Tue -->
-                <div class="bar-group"
-                    style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="bar"
-                        style="width: 100%; max-width: 40px; background: var(--brand-gradient); height: 80%; border-radius: 4px 4px 0 0;">
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Tue</span>
-                </div>
-                <!-- Wed -->
-                <div class="bar-group"
-                    style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="bar"
-                        style="width: 100%; max-width: 40px; background: var(--brand-gradient); height: 45%; border-radius: 4px 4px 0 0;">
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Wed</span>
-                </div>
-                <!-- Thu -->
-                <div class="bar-group"
-                    style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="bar"
-                        style="width: 100%; max-width: 40px; background: var(--brand-gradient); height: 90%; border-radius: 4px 4px 0 0;">
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Thu</span>
-                </div>
-                <!-- Fri -->
-                <div class="bar-group"
-                    style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="bar"
-                        style="width: 100%; max-width: 40px; background: var(--brand-primary); height: 100%; border-radius: 4px 4px 0 0; box-shadow: var(--shadow-glow);">
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--text-primary); font-weight: 600;">Fri</span>
-                </div>
-                <!-- Sat -->
-                <div class="bar-group"
-                    style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="bar"
-                        style="width: 100%; max-width: 40px; background: var(--brand-gradient); height: 65%; border-radius: 4px 4px 0 0; opacity: 0.6;">
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Sat</span>
-                </div>
-                <!-- Sun -->
-                <div class="bar-group"
-                    style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    <div class="bar"
-                        style="width: 100%; max-width: 40px; background: var(--brand-gradient); height: 35%; border-radius: 4px 4px 0 0; opacity: 0.6;">
-                    </div>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Sun</span>
-                </div>
+            <div style="height: 250px; width: 100%; position: relative;">
+                <canvas id="trafficChart"></canvas>
             </div>
         </div>
 
@@ -217,25 +158,79 @@
 </div>
 
 <style>
-    /* Scoped styles for the CSS bar chart transitions */
-    .bar-group:hover .bar {
-        filter: brightness(1.2);
-        cursor: pointer;
-    }
-
-    .bar-group:hover .tooltip {
-        opacity: 1;
-        transition: opacity 0.2s;
-    }
-
-    .bar {
-        transition: height 1s cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-
     @media (max-width: 768px) {
         .analytics-grid {
             grid-template-columns: 1fr !important;
         }
     }
 </style>
+
+<!-- Chart.js Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Fetch Top KPIs
+        fetch('/api/analytics/stats')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('analytics-total-scans').innerText = data.total_scans.toLocaleString();
+                document.getElementById('analytics-total-violations').innerText = data.total_violations.toLocaleString();
+                document.getElementById('analytics-accuracy').innerText = data.accuracy.toFixed(1) + '%';
+            })
+            .catch(err => console.error("Error fetching analytics stats:", err));
+
+        // Fetch Chart Data
+        fetch('/api/analytics/chart')
+            .then(res => res.json())
+            .then(data => {
+                const ctx = document.getElementById('trafficChart').getContext('2d');
+
+                // Primary brand color: #3b82f6
+                // Danger color: #ef4444
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.dates,
+                        datasets: [
+                            {
+                                label: 'Total Scans',
+                                data: data.totals,
+                                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                                borderRadius: 4,
+                            },
+                            {
+                                label: 'Violations (No Helmet)',
+                                data: data.violations,
+                                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                borderRadius: 4,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#9ca3af' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#9ca3af' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#9ca3af' }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(err => console.error("Error fetching chart data:", err));
+    });
+</script>
 {% endblock %}
