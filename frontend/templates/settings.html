@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h1>System Settings</h1>
+        <p>Configure model weights, confidence thresholds, and application preferences.</p>
+    </div>
+</div>
+
+<div class="settings-layout" style="display: grid; grid-template-columns: 260px 1fr; gap: 2rem; align-items: start;">
+
+    <!-- Settings Sidebar -->
+    <div class="glass-panel" style="padding: 1.5rem 1rem;">
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px;">
+            <li>
+                <button class="settings-nav-btn active">
+                    <i class="ph ph-cpu"></i> AI Models
+                </button>
+            </li>
+            <li>
+                <button class="settings-nav-btn">
+                    <i class="ph ph-bell-ringing"></i> Notifications
+                </button>
+            </li>
+            <li>
+                <button class="settings-nav-btn">
+                    <i class="ph ph-database"></i> Database
+                </button>
+            </li>
+            <li>
+                <button class="settings-nav-btn" style="color: var(--status-danger);">
+                    <i class="ph ph-trash"></i> Data Retention
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Settings Forms Area -->
+    <div class="glass-panel" style="padding: 2.5rem;">
+
+        <!-- Section: AI Models -->
+        <h3
+            style="font-size: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <i class="ph ph-cpu" style="color: var(--brand-primary);"></i> AI Model Configuration
+        </h3>
+
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; font-size: 0.95rem;">Active YOLOv8
+                Weights</label>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px;">Select the model size.
+                Larger models are more accurate but process slower.</p>
+            <select class="custom-select"
+                style="width: 100%; max-width: 400px; padding: 12px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); outline: none;">
+                <option value="nano">YOLOv8 Nano (Fastest)</option>
+                <option value="small">YOLOv8 Small</option>
+                <option value="medium">YOLOv8 Medium</option>
+                <option value="large" selected>YOLOv8 Large (Most Accurate)</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 2.5rem;">
+            <div style="display: flex; justify-content: space-between; max-width: 400px; margin-bottom: 8px;">
+                <label style="font-weight: 500; font-size: 0.95rem;">Confidence Threshold</label>
+                <span id="conf-val" style="color: var(--brand-primary); font-weight: 600;">85%</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px;">Minimum confidence required
+                to flag a violation.</p>
+            <input type="range" class="custom-slider" min="0" max="100" value="85"
+                style="width: 100%; max-width: 400px;"
+                oninput="document.getElementById('conf-val').innerText = this.value + '%'">
+        </div>
+
+        <!-- Section: Notifications -->
+        <h3
+            style="font-size: 1.25rem; margin-bottom: 1.5rem; margin-top: 3rem; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <i class="ph ph-bell-ringing" style="color: var(--brand-secondary);"></i> Alert Preferences
+        </h3>
+
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; max-width: 500px;">
+                <div>
+                    <h4 style="font-size: 0.95rem; font-weight: 500;">Email Alerts</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Send daily summary reports to admin.</p>
+                </div>
+                <!-- CSS Toggle Switch -->
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; max-width: 500px;">
+                <div>
+                    <h4 style="font-size: 0.95rem; font-weight: 500;">Real-time SMS</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Ping security team on critical
+                        violations.</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div
+            style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); display: flex; gap: 1rem;">
+            <button class="btn-primary" style="padding: 10px 24px;">Save Changes</button>
+            <button class="btn-outline">Reset Defaults</button>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    /* Scoped styles for Settings Page */
+    @media (max-width: 768px) {
+        .settings-layout {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    .settings-nav-btn {
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 12px 16px;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .settings-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text-primary);
+    }
+
+    .settings-nav-btn.active {
+        background: var(--brand-light);
+        color: var(--brand-primary);
+        font-weight: 600;
+    }
+
+    .settings-nav-btn i {
+        font-size: 1.2rem;
+    }
+
+    /* Custom HTML5 Range Slider Range */
+    .custom-slider {
+        -webkit-appearance: none;
+        height: 6px;
+        border-radius: 5px;
+        background: var(--bg-input);
+        outline: none;
+    }
+
+    .custom-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--brand-primary);
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        transition: transform 0.1s;
+    }
+
+    .custom-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+
+    /* iOS Style Toggle Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--bg-input);
+        transition: .3s;
+        border: 1px solid var(--border-color);
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 2px;
+        bottom: 2px;
+        background-color: var(--text-secondary);
+        transition: .3s;
+    }
+
+    input:checked+.slider {
+        background-color: var(--brand-primary);
+        border-color: var(--brand-primary);
+    }
+
+    input:checked+.slider:before {
+        transform: translateX(24px);
+        background-color: white;
+    }
+
+    .slider.round {
+        border-radius: 24px;
+    }
+
+    .slider.round:before {
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}

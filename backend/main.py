@@ -5,7 +5,9 @@ from ultralytics import YOLO
 from license_plate import LicensePlateDetector
 
 class YOLOv8System:
-    def __init__(self, model_path='best.pt'):
+    def __init__(self, model_path=None):
+        if model_path is None:
+            model_path = os.path.join(os.path.dirname(__file__), 'best.pt')
         # Load YOLOv8 model
         print(f"[INFO] Loading YOLOv8 Model from {model_path}...")
         if not os.path.exists(model_path):

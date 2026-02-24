@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h1>Traffic Monitoring Dashboard</h1>
+        <p>Real-time AI-powered helmet and license plate detection system.</p>
+    </div>
+    <div class="time-badge">
+        <i class="ph ph-clock"></i>
+        <span id="current-time">00:00:00</span>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Top Horizon Metric Widgets -->
+    <div class="horizon-metrics">
+        <div class="horizon-card glass-panel">
+            <div class="horizon-icon" style="color: var(--brand-primary); background: var(--brand-light);">
+                <i class="ph ph-camera"></i>
+            </div>
+            <div class="horizon-data">
+                <p>Today's Scans</p>
+                <h3 id="today-scans">1,248</h3>
+            </div>
+        </div>
+
+        <div class="horizon-card glass-panel">
+            <div class="horizon-icon" style="color: var(--status-danger); background: rgba(239, 68, 68, 0.1);">
+                <i class="ph ph-warning"></i>
+            </div>
+            <div class="horizon-data">
+                <p>Violations Detected</p>
+                <h3 id="violations-count">142</h3>
+            </div>
+        </div>
+
+        <div class="horizon-card glass-panel">
+            <div class="horizon-icon" style="color: var(--status-safe); background: rgba(16, 185, 129, 0.1);">
+                <i class="ph ph-crosshair"></i>
+            </div>
+            <div class="horizon-data">
+                <p>System Accuracy</p>
+                <h3>98.5%</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Request Container (Upload) -->
+    <div class="analysis-card glass-panel">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3><i class="ph ph-scan"></i> Analysis Studio</h3>
+            <div class="studio-tabs">
+                <button class="tab-btn active">Single Image</button>
+                <button class="tab-btn" onclick="alert('Batch Processing module coming in next release.')">Batch
+                    Processing</button>
+                <button class="tab-btn"
+                    onclick="alert('Live Camera stream integration scheduled for next update.')">Live Camera</button>
+            </div>
+        </div>
+
+        <div class="upload-section" id="upload-section">
+            <input type="file" id="file-input" accept="image/jpeg, image/jpg, image/png, image/webp, .jpg, .jpeg">
+            <div class="upload-content">
+                <div class="upload-icon-wrapper">
+                    <i class="ph ph-cloud-arrow-up"></i>
+                </div>
+                <h3>Upload an Image for Analysis</h3>
+                <p>Drag and drop your file here or <span
+                        style="color: var(--brand-primary); text-decoration: underline;">Browse Files</span></p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">Supports JPG, JPEG, PNG, WEBP
+                    (Max
+                    16MB)</p>
+            </div>
+        </div>
+
+        <div class="quick-actions" id="quick-actions">
+            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Quick Test:</span>
+            <button class="chip-btn" onclick="loadSample('/static/samples/helmet.webp', 'helmet.webp')"><i
+                    class="ph ph-image"></i> Load Sample Helmet</button>
+            <button class="chip-btn" onclick="loadSample('/static/samples/violation.webp', 'violation.webp')"><i
+                    class="ph ph-warning-circle"></i> Load Sample Violation</button>
+        </div>
+
+        <!-- Animated Skeleton Loading State (Hidden by default) -->
+        <div class="loader-container hidden" id="loader" style="display: none;">
+            <div class="pulse-ring"></div>
+            <div class="scanner-box">
+                <div class="scanner-line"></div>
+                <i class="ph ph-bounding-box scanner-icon"></i>
+            </div>
+            <h3 style="margin-top: 1.5rem; color: var(--text-primary);">Processing Image...</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">YOLOv8 Large model is analyzing the frame</p>
+            <div
+                style="width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 15px auto; overflow: hidden;">
+                <div
+                    style="height: 100%; background: var(--brand-primary); width: 50%; animation: loadBar 2s infinite ease-in-out;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Display Container (Hidden by default) -->
+    <div class="results-container glass-panel" id="result-area" style="display: none;">
+        <div class="card-header" style="padding: 1.5rem 1.5rem 0 1.5rem;">
+            <h3><i class="ph ph-magnifying-glass-plus"></i> Detection Results</h3>
+        </div>
+
+        <div class="result-layout">
+            <!-- Left Side: Image -->
+            <div class="result-image-box">
+                <img id="result-img" src="" alt="Detection Result">
+            </div>
+
+            <!-- Right Side: Data Metrics -->
+            <div class="result-data-box">
+                <!-- Status Card (Dynamic) -->
+                <div class="metric-card status-card" id="status-card-container">
+                    <div class="metric-header">
+                        <span class="metric-label">Violation Status</span>
+                        <i class="ph ph-warning-circle" id="status-icon"></i>
+                    </div>
+                    <h2 class="status-text" id="status-text">Analyzing...</h2>
+                </div>
+
+                <!-- License Plate Card -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-label">Detected Plate</span>
+                        <i class="ph ph-identification-card"></i>
+                    </div>
+                    <div class="plate-display">
+                        <h2 id="plate-text">--</h2>
+                    </div>
+                </div>
+
+                <!-- Metadata List -->
+                <div class="metadata-list">
+                    <div class="meta-item">
+                        <span class="meta-label">Model Engine</span>
+                        <span class="meta-value">YOLOv8 Large</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Processing Time</span>
+                        <span class="meta-value" id="proc-time">-- ms</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Confidence Score</span>
+                        <span class="meta-value">High (>85%)</span>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-secondary" onclick="resetApp()">
+                        <i class="ph ph-arrows-counter-clockwise"></i> New Analysis
+                    </button>
+                    <button class="btn-primary"
+                        style="flex: 1; padding: 12px; border: none; border-radius: var(--border-radius-sm); font-weight: 600;">
+                        <i class="ph ph-file-pdf"></i> Export Logic
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Log (Data Table) -->
+    <div class="recent-activity-card glass-panel">
+        <div class="card-header"
+            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+            <h3><i class="ph ph-clock-counter-clockwise"></i> Recent Detections</h3>
+            <button class="btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">View All</button>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Thumbnail</th>
+                        <th>Status</th>
+                        <th>Plate Detected</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-detections-body">
+                    <!-- Dynamic Rows Will Be Preponded Here by script.js -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

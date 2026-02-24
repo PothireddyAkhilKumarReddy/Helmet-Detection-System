@@ -5,11 +5,14 @@ from main import YOLOv8System, check_lfs_files
 import sys
 
 # Initialize Flask App
-app = Flask(__name__)
+app = Flask(__name__,
+            template_folder=os.path.join(os.path.dirname(__file__), '..', 'frontend', 'templates'),
+            static_folder=os.path.join(os.path.dirname(__file__), '..', 'frontend', 'static'))
 
 # Configuration
-UPLOAD_FOLDER = 'uploads'
-RESULTS_FOLDER = 'results'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+RESULTS_FOLDER = os.path.join(BASE_DIR, 'results')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULTS_FOLDER'] = RESULTS_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload setup
@@ -29,8 +32,44 @@ system = YOLOv8System()
 print("[INFO] System Ready.")
 
 @app.route('/')
-def index():
+def home():
+    """Render the main UI page."""
     return render_template('index.html')
+
+@app.route('/analytics')
+def analytics():
+    """Render the Analytics page."""
+    return render_template('analytics.html')
+
+@app.route('/live_feed')
+def live_feed():
+    """Render the Live Feed page."""
+    return render_template('live_feed.html')
+
+@app.route('/settings')
+def settings():
+    """Render the Settings page."""
+    return render_template('settings.html')
+
+@app.route('/login')
+def login():
+    """Render the Login page."""
+    return render_template('login.html')
+
+@app.route('/signup')
+def signup():
+    """Render the Sign Up page."""
+    return render_template('signup.html')
+
+@app.route('/about')
+def about():
+    """Render the About Us page."""
+    return render_template('about.html')
+
+@app.route('/terms')
+def terms():
+    """Render the Terms & Conditions page."""
+    return render_template('terms.html')
 
 @app.route('/detect', methods=['POST'])
 def detect():
@@ -71,11 +110,13 @@ def detect():
                 output_filename = os.path.basename(output_path)
                 plate_filename = os.path.basename(plate_crop_path) if plate_crop_path else None
                 
+                import time
+                timestamp = int(time.time())
                 return jsonify({
                     'success': True,
-                    'result_url': f'/results/{output_filename}',
+                    'result_url': f'/results/{output_filename}?v={timestamp}',
                     'plate_text': plate_text if plate_text else "No Plate Detected",
-                    'plate_url': f'/results/{plate_filename}' if plate_filename else None,
+                    'plate_url': f'/results/{plate_filename}?v={timestamp}' if plate_filename else None,
                     'status_text': status_text
                 })
             else:

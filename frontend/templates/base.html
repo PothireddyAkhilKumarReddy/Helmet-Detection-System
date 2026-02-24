@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic AI Guard | Dashboard</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Phosphor Icons (Sleeker than standard Ionicons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="top-nav-layout">
+
+        <!-- Horizontal Top Navbar -->
+        <header class="top-navbar glass-panel">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <i class="ph ph-shield-check"></i>
+                </div>
+                <h2>Traffic AI</h2>
+            </div>
+
+            <nav class="nav-links">
+                <a href="{{ url_for('home') }}" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                    <i class="ph ph-squares-four"></i> Dashboard
+                </a>
+                <a href="{{ url_for('analytics') }}"
+                    class="nav-item {% if request.path == '/analytics' %}active{% endif %}">
+                    <i class="ph ph-chart-line-up"></i> Analytics
+                </a>
+                <a href="{{ url_for('live_feed') }}"
+                    class="nav-item {% if request.path == '/live_feed' %}active{% endif %}">
+                    <i class="ph ph-video-camera"></i> Live Feed
+                </a>
+                <a href="{{ url_for('settings') }}"
+                    class="nav-item {% if request.path == '/settings' %}active{% endif %}">
+                    <i class="ph ph-gear"></i> Settings
+                </a>
+            </nav>
+
+            <div class="nav-actions">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Theme">
+                    <i class="ph ph-sun" id="theme-icon"></i>
+                </button>
+                <div class="auth-buttons">
+                    <a href="{{ url_for('login') }}" class="btn-outline">Log In</a>
+                    <a href="{{ url_for('signup') }}" class="btn-primary">Sign Up</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+    </div>
+
+    <!-- Global Footer -->
+    <footer class="global-footer glass-panel">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <i class="ph ph-shield-check"></i>
+                <span>Traffic AI Guard &copy; 2026</span>
+            </div>
+            <div class="footer-links">
+                <a href="{{ url_for('about') }}">About Us</a>
+                <a href="{{ url_for('terms') }}">Terms & Conditions</a>
+                <a href="#">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Main JavaScript Logic -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
