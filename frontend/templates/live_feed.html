@@ -3,15 +3,101 @@
 {% block content %}
 <div class="content-header">
     <div>
-        <h1>Live Camera Feed</h1>
+        <h1><i class="ph ph-video-camera"></i> Live Camera Feed</h1>
         <p>Monitor street cameras and process traffic streams in real-time.</p>
     </div>
 </div>
 
-<div class="glass-panel" style="padding: 3rem; text-align: center;">
-    <i class="ph ph-video-camera" style="font-size: 4rem; color: var(--status-danger); margin-bottom: 1rem;"></i>
-    <h2>Live Monitoring Offline</h2>
-    <p style="color: var(--text-secondary); margin-top: 1rem;">Connect an RTSP camera stream or video file source in
-        Settings to activate the Live Feed.</p>
+<div class="live-feed-container glass-panel"
+    style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+
+    <!-- Controls Bar -->
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="status-indicator">
+                <span class="pulse-dot" id="stream-dot"
+                    style="width: 12px; height: 12px; border-radius: 50%; display: inline-block; background-color: var(--status-danger);"></span>
+                <span id="stream-status" style="font-weight: 600; color: var(--text-secondary);">OFFLINE</span>
+            </div>
+            <select class="settings-select" style="padding: 6px 12px; font-size: 0.85rem;">
+                <option>Camera 1 (Main Intersection)</option>
+                <option>Camera 2 (Highway Exit)</option>
+                <option>Camera 3 (Toll Booth)</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-primary" id="btn-start-stream" onclick="toggleStream()" style="padding: 8px 16px;">
+                <i class="ph ph-play"></i> Start Stream
+            </button>
+        </div>
+    </div>
+
+    <!-- Video Display Area -->
+    <div class="video-wrapper"
+        style="width: 100%; aspect-ratio: 16/9; background-color: #000; border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center;">
+
+        <!-- Offline State UI -->
+        <div id="offline-state" style="text-align: center;">
+            <i class="ph ph-video-camera-slash"
+                style="font-size: 3rem; color: rgba(255,255,255,0.2); margin-bottom: 1rem;"></i>
+            <h3 style="color: rgba(255,255,255,0.4);">Stream Paused</h3>
+        </div>
+
+        <!-- The actual MJPEG feed -->
+        <img id="live-video" src="" alt="Live Feed"
+            style="width: 100%; height: 100%; object-fit: contain; display: none;">
+
+        <!-- Overlay Stats (Optional) -->
+        <div id="stream-overlay"
+            style="position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.6); padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); display: none;">
+            <span
+                style="color: #10b981; font-weight: 600; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                <i class="ph ph-activity"></i> LIVE INFERENCE
+            </span>
+        </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div class="metric-card" style="padding: 1rem; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">FPS Target</div>
+            <h3 style="font-family: monospace;">24.0</h3>
+        </div>
+        <div class="metric-card" style="padding: 1rem; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Analysis Engine</div>
+            <h3>YOLOv8 Large</h3>
+        </div>
+        <div class="metric-card" style="padding: 1rem; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Bandwidth</div>
+            <h3 style="font-family: monospace;">~2.4 MB/s</h3>
+        </div>
+    </div>
 </div>
+
+<style>
+    /* Add a blinking animation for the online dot */
+    @keyframes blink {
+        0% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.5;
+            transform: scale(1.2);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .pulse-dot.online {
+        background-color: var(--status-safe) !important;
+        animation: blink 1.5s infinite ease-in-out;
+    }
+</style>
 {% endblock %}

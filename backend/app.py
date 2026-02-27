@@ -169,6 +169,89 @@ def detect():
 def uploaded_file(filename):
     return send_from_directory(app.config['RESULTS_FOLDER'], filename)
 
+@app.route('/api/batch-detect', methods=['POST'])
+def batch_detect():
+    if 'files[]' not in request.files:
+        return jsonify({'error': 'No files provided'}), 400
+        
+    files = request.files.getlist('files[]')
+    if not files or all(f.filename == '' for f in files):
+        return jsonify({'error': 'No selected files'}), 400
+
+    results = []
+    
+    for file in files:
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            try:
+                # Process Image
+                result = system.process_image(filepath, output_dir=app.config['RESULTS_FOLDER'])
+                
+                # Handle variable return values just in case
+                if isinstance(result, tuple):
+                    if len(result) == 4:
+                         output_path, plate_text, plate_crop_path, status_text = result
+                    elif len(result) == 3:
+                         output_path, plate_text, plate_crop_path = result
+                         status_text = "Unknown"
+                    elif len(result) == 2:
+                         output_path, plate_text = result
+                         plate_crop_path = None
+                         status_text = "Unknown"
+                else:
+                    output_path = result
+                    plate_text = None
+                    plate_crop_path = None
+                    status_text = "Unknown"
+
+                if output_path:
+                    output_filename = os.path.basename(output_path)
+                    plate_filename = os.path.basename(plate_crop_path) if plate_crop_path else None
+                    
+                    import time
+                    timestamp_val = int(time.time() * 1000) # Use ms for uniqueness in rapid batch
+                    res_url = f'/results/{output_filename}?v={timestamp_val}'
+                    plt_url = f'/results/{plate_filename}?v={timestamp_val}' if plate_filename else None
+                    
+                    # Save to Database
+                    try:
+                        conn = sqlite3.connect(DB_PATH)
+                        cursor = conn.cursor()
+                        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        safe_plate = plate_text if plate_text else "No Plate Detected"
+                        
+                        cursor.execute('''
+                            INSERT INTO detections (timestamp, status_text, plate_text, result_url, plate_url)
+                            VALUES (?, ?, ?, ?, ?)
+                        ''', (now_str, status_text, safe_plate, res_url, plt_url))
+                        conn.commit()
+                        conn.close()
+                    except Exception as db_e:
+                        print(f"[ERROR] Batch db save error: {db_e}")
+
+                    results.append({
+                        'filename': filename,
+                        'success': True,
+                        'result_url': res_url,
+                        'plate_text': safe_plate,
+                        'plate_url': plt_url,
+                        'status_text': status_text
+                    })
+                else:
+                    results.append({'filename': filename, 'success': False, 'error': 'Detection returned no output'})
+            except Exception as e:
+                print(f"[ERROR] Batch logic error on {filename}: {e}")
+                results.append({'filename': filename, 'success': False, 'error': str(e)})
+                
+    return jsonify({
+        'success': True,
+        'processed_count': len(results),
+        'results': results
+    })
+
 # --- API ENDPOINTS FOR FRONTEND DATA ---
 
 @app.route('/api/analytics/stats')
@@ -199,6 +282,32 @@ def api_history():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM detections ORDER BY id DESC LIMIT 10")
+    rows = cursor.fetchall()
+    
+    data = []
+    for r in rows:
+        data.append({
+            'id': r['id'],
+            'timestamp': r['timestamp'],
+            'status_text': r['status_text'],
+            'plate_text': r['plate_text'],
+            'result_url': r['result_url']
+        })
+        
+    conn.close()
+    return jsonify(data)
+
+@app.route('/api/live-feed')
+def live_feed_stream():
+    """Stream simulated live camera feed via MJPEG."""
+    video_path = os.path.join(app.config['STATIC_FOLDER'], 'samples', 'sample_traffic.mp4')
+    if not os.path.exists(video_path):
+        return "Video source not found", 404
+        
+    return Response(system.generate_video_stream(video_path), 
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
     
     cursor.execute("SELECT * FROM detections ORDER BY id DESC LIMIT 10")
     rows = cursor.fetchall()

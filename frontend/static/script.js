@@ -26,7 +26,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Bind batch file input
+    const batchFileInputEl = document.getElementById('batch-file-input');
+    if (batchFileInputEl) {
+        batchFileInputEl.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadBatch(e.target.files);
+            }
+        });
+    }
 });
+
+/* Tab Switching Logic */
+function switchTab(tab) {
+    const singleTabBtn = document.getElementById('tab-single');
+    const batchTabBtn = document.getElementById('tab-batch');
+    const singleSection = document.getElementById('upload-section');
+    const batchSection = document.getElementById('batch-upload-section');
+    const quickActions = document.getElementById('quick-actions');
+    const resultArea = document.getElementById('result-area');
+
+    resultArea.style.display = 'none';
+
+    if (tab === 'single') {
+        singleTabBtn.classList.add('active');
+        batchTabBtn.classList.remove('active');
+        singleSection.style.display = 'block';
+        batchSection.style.display = 'none';
+        quickActions.style.display = 'flex';
+    } else if (tab === 'batch') {
+        batchTabBtn.classList.add('active');
+        singleTabBtn.classList.remove('active');
+        batchSection.style.display = 'block';
+        singleSection.style.display = 'none';
+        quickActions.style.display = 'none'; // Hide quick test for batch
+    }
+}
 
 // Theme Management
 const themeToggle = document.getElementById('theme-toggle');
@@ -215,6 +251,109 @@ function uploadFile(file) {
         });
 }
 
+function uploadBatch(files) {
+    if (files.length === 0) return;
+
+    let formData = new FormData();
+    let validFilesFound = 0;
+
+    // Filter for images only
+    for (let i = 0; i < files.length; i++) {
+        if (files[i].type.startsWith('image/')) {
+            formData.append('files[]', files[i]);
+            validFilesFound++;
+        }
+    }
+
+    if (validFilesFound === 0) {
+        alert("No valid images found in the selected folder.");
+        return;
+    }
+
+    // Switch to Loading UI
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('batch-upload-section').style.display = 'none';
+    document.getElementById('quick-actions').style.display = 'none';
+    resultArea.style.display = 'none';
+    processingState.style.display = 'flex';
+
+    // Update loader text
+    const loaderTitle = document.getElementById('loader-title');
+    const loaderSubtitle = document.getElementById('loader-subtitle');
+    if (loaderTitle) loaderTitle.innerText = `Processing Batch (${validFilesFound} images)...`;
+    if (loaderSubtitle) loaderSubtitle.innerText = "Please keep this tab open. The backend is analyzing all frames.";
+
+    fetch('/api/batch-detect', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Refresh the recent detections table and stats to show the new batch
+                fetchDashboardStats();
+                fetchDashboardHistory();
+
+                // Populate the Batch Results Grid
+                const grid = document.getElementById('batch-results-grid');
+                grid.innerHTML = ''; // Clear previous results
+
+                document.getElementById('batch-summary-text').innerText = `Processed ${data.results.length} images`;
+
+                data.results.forEach(res => {
+                    let badgeClass = "badge-safe";
+                    let iconClass = "ph ph-check-circle";
+                    let cardBorder = "1px solid var(--border-color)";
+
+                    const statusText = res.status_text || "Unknown";
+
+                    if (statusText.includes("NO HELMET")) {
+                        badgeClass = "badge-danger";
+                        iconClass = "ph ph-warning-circle";
+                        cardBorder = "1px solid rgba(239, 68, 68, 0.4)";
+                    } else if (statusText.includes("No Rider/Helmet Detected")) {
+                        badgeClass = "badge-outline";
+                        iconClass = "ph ph-question";
+                    }
+
+                    const plateStr = res.plate_text && res.plate_text !== "No Plate Detected" ? res.plate_text : "--";
+                    const plateColor = plateStr !== "--" ? "#fbbf24" : "var(--text-muted)";
+
+                    const cardHTML = `
+                        <div class="metric-card" style="border: ${cardBorder}; padding: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="width: 100%; height: 180px; border-radius: 8px; overflow: hidden; background: #000;">
+                                <img src="${res.result_url}" alt="Result" style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
+                                    <span style="font-size: 0.8rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 120px;" title="${res.filename}">${res.filename}</span>
+                                    <span class="badge ${badgeClass}"><i class="${iconClass}"></i> ${statusText.split('(')[0].trim()}</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">Plate:</span>
+                                    <span style="font-weight: 600; color: ${plateColor}; font-family: monospace;">${plateStr}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    grid.insertAdjacentHTML('beforeend', cardHTML);
+                });
+
+                // Show the grid
+                document.getElementById('batch-result-area').style.display = 'block';
+
+            } else {
+                alert('Error from server: ' + data.error);
+                resetApp();
+            }
+        })
+        .catch(error => {
+            console.error('Batch Error:', error);
+            alert('A network error occurred during batch processing.');
+            resetApp();
+        });
+}
+
 function updateDashboard(data) {
     updateTime();
 
@@ -268,14 +407,94 @@ function updateDashboard(data) {
 
 function resetApp() {
     resultArea.style.display = 'none';
+    const batchResultArea = document.getElementById('batch-result-area');
+    if (batchResultArea) batchResultArea.style.display = 'none';
     processingState.style.display = 'none';
-    dropArea.style.display = 'block';
+
+    const loaderTitle = document.getElementById('loader-title');
+    const loaderSubtitle = document.getElementById('loader-subtitle');
+    if (loaderTitle) loaderTitle.innerText = "Processing Image...";
+    if (loaderSubtitle) loaderSubtitle.innerText = "YOLOv8 Large model is analyzing the frame";
+
+    const activeTab = document.querySelector('.tab-btn.active');
+    if (activeTab && activeTab.id === 'tab-batch') {
+        switchTab('batch');
+    } else {
+        switchTab('single');
+    }
 
     // Reset main visual state
     resultImg.src = '';
     const fileInput = document.getElementById('file-input');
     if (fileInput) fileInput.value = '';
+    const batchFileInput = document.getElementById('batch-file-input');
+    if (batchFileInput) batchFileInput.value = '';
 
     // Scroll back to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// --- LIVE CAMERA FEED LOGIC ---
+let isStreaming = false;
+let liveStatsInterval = null;
+
+function toggleStream() {
+    const videoEl = document.getElementById('live-video');
+    const offlineState = document.getElementById('offline-state');
+    const streamDot = document.getElementById('stream-dot');
+    const streamStatus = document.getElementById('stream-status');
+    const btn = document.getElementById('btn-start-stream');
+    const overlay = document.getElementById('stream-overlay');
+
+    if (!videoEl || !offlineState) return; // Prevent errors on other pages
+
+    if (!isStreaming) {
+        // Start Stream
+        isStreaming = true;
+
+        // Add a timestamp to bypass caching
+        videoEl.src = `/api/live-feed?t=${new Date().getTime()}`;
+
+        offlineState.style.display = 'none';
+        videoEl.style.display = 'block';
+        overlay.style.display = 'block';
+
+        streamDot.classList.add('online');
+        streamStatus.innerText = 'LIVE INFERENCE';
+        streamStatus.style.color = 'var(--status-safe)';
+
+        btn.innerHTML = '<i class="ph ph-stop"></i> Stop Stream';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+        btn.style.borderColor = 'var(--status-danger)';
+        btn.style.color = 'var(--status-danger)';
+
+        // Start polling stats faster while streaming
+        liveStatsInterval = setInterval(() => {
+            fetchDashboardStats();
+            // Note: In a real app we'd fetch table history too, but that might be 
+            // too heavy for SQLite at 10FPS. Stats are lighter.
+        }, 3000);
+
+    } else {
+        // Stop Stream
+        isStreaming = false;
+        videoEl.src = ''; // Cut feed
+
+        offlineState.style.display = 'block';
+        videoEl.style.display = 'none';
+        overlay.style.display = 'none';
+
+        streamDot.classList.remove('online');
+        streamStatus.innerText = 'OFFLINE';
+        streamStatus.style.color = 'var(--text-secondary)';
+
+        btn.innerHTML = '<i class="ph ph-play"></i> Start Stream';
+        btn.classList.add('btn-primary');
+        btn.classList.remove('btn-secondary');
+        btn.style.borderColor = '';
+        btn.style.color = '';
+
+        if (liveStatsInterval) clearInterval(liveStatsInterval);
+    }
 }

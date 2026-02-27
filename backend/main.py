@@ -133,6 +133,67 @@ class YOLOv8System:
 
         return output_path, full_text, final_plate_path, status_text
 
+    def generate_video_stream(self, video_path):
+        """Generator function to yield annotated frames from a video stream for MJPEG."""
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            print(f"[ERROR] Could not open video: {video_path}")
+            return
+
+        frame_count = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                # Video ended, loop back for continuous simulation
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue
+                
+            frame_count += 1
+            # Skip frames to simulate real-time processing speed if needed, or process every frame
+            # Process every 2nd frame for better performance on CPU
+            if frame_count % 2 != 0:
+                continue
+
+            # Run Inference on the frame
+            results = self.model(frame, conf=0.25, verbose=False)[0]
+
+            for box in results.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                conf = float(box.conf[0])
+                cls_id = int(box.cls[0])
+                label = self.class_names[cls_id]
+                
+                color = (0, 255, 0) # Green default
+                lbl_lower = label.lower()
+                is_violation = False
+                
+                if "plate" in lbl_lower or "license" in lbl_lower:
+                    if conf > 0.2: color = (255, 0, 0)
+                elif "helmet" in lbl_lower:
+                    if "no" in lbl_lower or "without" in lbl_lower or "missing" in lbl_lower or "not" in lbl_lower:
+                         is_violation = True
+                elif "head" in lbl_lower:
+                    if "helmet" not in lbl_lower:
+                        is_violation = True
+
+                if is_violation:
+                    color = (0, 0, 255) # Red
+                    label = "NO HELMET"
+
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+            # Encode frame to JPEG
+            ret, buffer = cv2.imencode('.jpg', frame)
+            if not ret:
+                continue
+                
+            frame_bytes = buffer.tobytes()
+            # Yield frame in multipart format
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
 def check_lfs_files():
     # Placeholder for compatibility if app.py calls it
     # YOLO doesn't require git LFS checks for this setup

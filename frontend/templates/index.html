@@ -51,11 +51,9 @@
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h3><i class="ph ph-scan"></i> Analysis Studio</h3>
             <div class="studio-tabs">
-                <button class="tab-btn active">Single Image</button>
-                <button class="tab-btn" onclick="alert('Batch Processing module coming in next release.')">Batch
-                    Processing</button>
-                <button class="tab-btn"
-                    onclick="alert('Live Camera stream integration scheduled for next update.')">Live Camera</button>
+                <button class="tab-btn active" id="tab-single" onclick="switchTab('single')">Single Image</button>
+                <button class="tab-btn" id="tab-batch" onclick="switchTab('batch')">Batch Processing</button>
+                <button class="tab-btn" onclick="window.location.href='/live_feed'">Live Camera</button>
             </div>
         </div>
 
@@ -69,8 +67,21 @@
                 <p>Drag and drop your file here or <span
                         style="color: var(--brand-primary); text-decoration: underline;">Browse Files</span></p>
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">Supports JPG, JPEG, PNG, WEBP
-                    (Max
-                    16MB)</p>
+                    (Max 16MB)</p>
+            </div>
+        </div>
+
+        <div class="upload-section" id="batch-upload-section" style="display: none;">
+            <input type="file" id="batch-file-input" webkitdirectory directory multiple>
+            <div class="upload-content">
+                <div class="upload-icon-wrapper">
+                    <i class="ph ph-folders"></i>
+                </div>
+                <h3>Upload a Folder for Batch Analysis</h3>
+                <p>Drag and drop your folder here or <span
+                        style="color: var(--brand-primary); text-decoration: underline;">Browse Folders</span></p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">Select a folder containing
+                    multiple images</p>
             </div>
         </div>
 
@@ -89,11 +100,12 @@
                 <div class="scanner-line"></div>
                 <i class="ph ph-bounding-box scanner-icon"></i>
             </div>
-            <h3 style="margin-top: 1.5rem; color: var(--text-primary);">Processing Image...</h3>
-            <p style="color: var(--text-secondary); font-size: 0.9rem;">YOLOv8 Large model is analyzing the frame</p>
+            <h3 style="margin-top: 1.5rem; color: var(--text-primary);" id="loader-title">Processing Image...</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;" id="loader-subtitle">YOLOv8 Large model is
+                analyzing the frame</p>
             <div
                 style="width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 15px auto; overflow: hidden;">
-                <div
+                <div id="loader-bar"
                     style="height: 100%; background: var(--brand-primary); width: 50%; animation: loadBar 2s infinite ease-in-out;">
                 </div>
             </div>
@@ -160,6 +172,27 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Batch Results Display Container (Hidden by default) -->
+    <div class="results-container glass-panel" id="batch-result-area" style="display: none; margin-bottom: 2rem;">
+        <div class="card-header"
+            style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 1.5rem 0 1.5rem; margin-bottom: 1.5rem;">
+            <h3><i class="ph ph-folders"></i> Batch Analysis Results</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span id="batch-summary-text" style="font-size: 0.9rem; color: var(--text-muted);">Processed 0
+                    images</span>
+                <button class="btn-secondary" onclick="resetApp()" style="padding: 6px 12px; font-size: 0.85rem;">
+                    <i class="ph ph-arrows-counter-clockwise"></i> New Batch
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid to hold individual result cards -->
+        <div class="batch-grid" id="batch-results-grid"
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; padding: 0 1.5rem 1.5rem 1.5rem;">
+            <!-- Dynamically injected batch cards will go here -->
         </div>
     </div>
 
