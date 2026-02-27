@@ -1,15 +1,18 @@
 import os
 import sqlite3
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, Response
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from main import YOLOv8System, check_lfs_files
+from main import YOLOv8System, check_lfs_files, STREAM_STATS
 import sys
+import json
+import time
 
 # Initialize Flask App
-app = Flask(__name__,
-            template_folder=os.path.join(os.path.dirname(__file__), '..', 'frontend', 'templates'),
-            static_folder=os.path.join(os.path.dirname(__file__), '..', 'frontend', 'static'))
+app = Flask(__name__)
+# Enable CORS for all domains on all routes
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +20,7 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 RESULTS_FOLDER = os.path.join(BASE_DIR, 'results')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULTS_FOLDER'] = RESULTS_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload setup
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max upload setup
 
 # Ensure directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -53,46 +56,6 @@ if not check_lfs_files():
 
 system = YOLOv8System()
 print("[INFO] System Ready.")
-
-@app.route('/')
-def home():
-    """Render the main UI page."""
-    return render_template('index.html')
-
-@app.route('/analytics')
-def analytics():
-    """Render the Analytics page."""
-    return render_template('analytics.html')
-
-@app.route('/live_feed')
-def live_feed():
-    """Render the Live Feed page."""
-    return render_template('live_feed.html')
-
-@app.route('/settings')
-def settings():
-    """Render the Settings page."""
-    return render_template('settings.html')
-
-@app.route('/login')
-def login():
-    """Render the Login page."""
-    return render_template('login.html')
-
-@app.route('/signup')
-def signup():
-    """Render the Sign Up page."""
-    return render_template('signup.html')
-
-@app.route('/about')
-def about():
-    """Render the About Us page."""
-    return render_template('about.html')
-
-@app.route('/terms')
-def terms():
-    """Render the Terms & Conditions page."""
-    return render_template('terms.html')
 
 @app.route('/detect', methods=['POST'])
 def detect():
@@ -154,6 +117,7 @@ def detect():
 
                 return jsonify({
                     'success': True,
+                    'input_url': f'/uploads/{filename}',
                     'result_url': res_url,
                     'plate_text': plate_text if plate_text else "No Plate Detected",
                     'plate_url': plt_url,
@@ -168,6 +132,10 @@ def detect():
 @app.route('/results/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['RESULTS_FOLDER'], filename)
+
+@app.route('/uploads/<filename>')
+def serve_input_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/api/batch-detect', methods=['POST'])
 def batch_detect():
@@ -235,6 +203,7 @@ def batch_detect():
                     results.append({
                         'filename': filename,
                         'success': True,
+                        'input_url': f'/uploads/{filename}',
                         'result_url': res_url,
                         'plate_text': safe_plate,
                         'plate_url': plt_url,
@@ -251,6 +220,73 @@ def batch_detect():
         'processed_count': len(results),
         'results': results
     })
+
+@app.route('/api/upload-video', methods=['POST'])
+def upload_video():
+    # Frontend might send 'video' or 'file' depending on the payload builder
+    file_key = 'video' if 'video' in request.files else 'file'
+    
+    if file_key not in request.files:
+        return jsonify({'error': 'No video file part'}), 400
+    
+    file = request.files[file_key]
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    if file:
+        filename = secure_filename(file.filename)
+        # Ensure it's a video file type (basic check)
+        if not filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+             return jsonify({'error': 'Invalid file format. Please upload a video.'}), 400
+             
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Return the stream URL immediately
+        stream_url = f"/api/stream-video/{filename}"
+        
+        # Also log this event to the DB (optional but good for tracking)
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute('''
+                INSERT INTO detections (timestamp, status_text, plate_text, result_url, plate_url)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (now_str, "Video Processed", "N/A", stream_url, None))
+            conn.commit()
+            conn.close()
+        except Exception as db_e:
+            print(f"[ERROR] Video DB save error: {db_e}")
+
+        return jsonify({
+            'success': True,
+            'input_url': f'/uploads/{filename}',
+            'stream_url': stream_url,
+            'filename': filename
+        })
+
+@app.route('/api/stream-video/<filename>')
+def stream_video(filename):
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
+    if not os.path.exists(filepath):
+        return "File not found", 404
+        
+    # Stream the video, but tell the generator to stop when done (loop=False)
+    return Response(system.generate_video_stream(filepath, loop=False),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/api/stream-stats/<filename>')
+def stream_stats(filename):
+    """Server-Sent Events endpoint for pushing live tracking metrics"""
+    def generate():
+        while True:
+            # Fetch latest stats built by the background YOLO frame loop
+            stats = STREAM_STATS.get(filename, {"safe": 0, "unsafe": 0, "plates": []})
+            yield f"data: {json.dumps(stats)}\n\n"
+            time.sleep(1) # Broadcast updates 1x per sec to prevent frontend overload
+
+    return Response(generate(), mimetype='text/event-stream')
 
 # --- API ENDPOINTS FOR FRONTEND DATA ---
 
@@ -302,28 +338,12 @@ def api_history():
 @app.route('/api/live-feed')
 def live_feed_stream():
     """Stream simulated live camera feed via MJPEG."""
-    video_path = os.path.join(app.config['STATIC_FOLDER'], 'samples', 'sample_traffic.mp4')
+    video_path = os.path.join(app.static_folder, 'samples', 'sample_traffic.mp4')
     if not os.path.exists(video_path):
         return "Video source not found", 404
         
     return Response(system.generate_video_stream(video_path), 
                     mimetype='multipart/x-mixed-replace; boundary=frame')
-    
-    cursor.execute("SELECT * FROM detections ORDER BY id DESC LIMIT 10")
-    rows = cursor.fetchall()
-    
-    data = []
-    for r in rows:
-        data.append({
-            'id': r['id'],
-            'timestamp': r['timestamp'],
-            'status_text': r['status_text'],
-            'plate_text': r['plate_text'],
-            'result_url': r['result_url']
-        })
-        
-    conn.close()
-    return jsonify(data)
 
 @app.route('/api/analytics/chart')
 def api_chart():

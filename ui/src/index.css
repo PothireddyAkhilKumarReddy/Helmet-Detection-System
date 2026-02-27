@@ -18,6 +18,9 @@
     --text-secondary: #a1a1aa;
     --text-muted: #71717a;
 
+    /* Theme transition control */
+    --theme-transition: background-color 0.2s ease, color 0.2s ease;
+
     /* Brand & Status Colors */
     --brand-primary: #6366f1;
     --brand-secondary: #8b5cf6;
@@ -87,24 +90,20 @@ body {
         radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
         radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
     background-attachment: fixed;
-    /* Add a truly global, silky smooth transition for all color/bg properties */
-    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-        color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Extremely smooth global background paint */
+    transition: var(--theme-transition);
 }
 
-/* General Layout Transition Hook */
-.glass-panel,
-.sidebar,
-.top-header,
+/* Targeted Transitions (Removed .glass-panel due to backdrop-filter lag) */
 .theme-toggle,
 .search-bar input,
 .nav-item,
 .upload-section {
-    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-        border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-        box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-        color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-        transform 0.3s ease;
+    transition: background-color 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease,
+        color 0.3s ease,
+        transform 0.2s ease;
 }
 
 /* Panel Design */
@@ -138,14 +137,16 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2rem;
+    padding: 0 5%;
     position: sticky;
     top: 0;
     z-index: 100;
-    /* Remove full border, just bottom border for navbar */
     border: none;
     border-bottom: 1px solid var(--border-color);
     border-radius: 0;
+    background: var(--bg-panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .nav-brand {
@@ -256,9 +257,7 @@ body {
    ========================================= */
 .main-content {
     flex: 1;
-    padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
+    padding: 2rem 0;
     width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
@@ -280,6 +279,52 @@ body {
 }
 
 /* =========================================
+   Dashboard/Analytics KPI Horizon Panel
+   ========================================= */
+.horizon-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.horizon-item {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.horizon-icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+}
+
+.horizon-data p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.horizon-data h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+@media (max-width: 768px) {
+    .horizon-panel {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
+/* =========================================
    Dashboard Content Components
    ========================================= */
 .dashboard-grid {
@@ -289,6 +334,20 @@ body {
     flex-direction: column;
     gap: 2.5rem;
     width: 100%;
+}
+
+.dashboard-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    margin-top: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-main-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .content-header {

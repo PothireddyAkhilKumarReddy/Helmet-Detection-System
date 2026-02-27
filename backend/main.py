@@ -3,6 +3,10 @@ import numpy as np
 import os
 from ultralytics import YOLO
 from license_plate import LicensePlateDetector
+import PIL.Image
+
+# Global dictionary to track live stats per video filename for SSE
+STREAM_STATS = {}
 
 class YOLOv8System:
     def __init__(self, model_path=None):
@@ -133,7 +137,7 @@ class YOLOv8System:
 
         return output_path, full_text, final_plate_path, status_text
 
-    def generate_video_stream(self, video_path):
+    def generate_video_stream(self, video_path, loop=True):
         """Generator function to yield annotated frames from a video stream for MJPEG."""
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -144,9 +148,13 @@ class YOLOv8System:
         while True:
             ret, frame = cap.read()
             if not ret:
-                # Video ended, loop back for continuous simulation
-                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                continue
+                if loop:
+                    # Video ended, loop back for continuous live simulation
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    continue
+                else:
+                    # Stop streaming for uploaded file playback
+                    break
                 
             frame_count += 1
             # Skip frames to simulate real-time processing speed if needed, or process every frame
@@ -156,6 +164,10 @@ class YOLOv8System:
 
             # Run Inference on the frame
             results = self.model(frame, conf=0.25, verbose=False)[0]
+
+            safe_count = 0
+            unsafe_count = 0
+            plates = []
 
             for box in results.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -179,10 +191,30 @@ class YOLOv8System:
                 if is_violation:
                     color = (0, 0, 255) # Red
                     label = "NO HELMET"
+                    unsafe_count += 1
+                elif "helmet" in lbl_lower:
+                    safe_count += 1
+                elif label == "License Plate":
+                    # Attempt quick OCR for the specific frame or just track detection
+                    try:
+                        plate_crop = frame[y1:y2, x1:x2]
+                        pil_img = PIL.Image.fromarray(cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB))
+                        text = self.plate_detector.extract_text(pil_img)
+                        if text: plates.append(text)
+                    except:
+                        pass # Ignore individual frame OCR failures for speed
 
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                            
+            # Update global stats for SSE
+            filename = os.path.basename(video_path)
+            STREAM_STATS[filename] = {
+                "safe": safe_count,
+                "unsafe": unsafe_count,
+                "plates": plates if plates else ["No Text Detected"]
+            }
 
             # Encode frame to JPEG
             ret, buffer = cv2.imencode('.jpg', frame)
