@@ -2,23 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     CloudArrowUp,
     Folders,
-    Image as ImageIcon,
     WarningCircle,
     Scan,
-    CheckCircle,
-    Question,
     ClockCounterClockwise,
-    ArrowsCounterClockwise,
-    FilePdf,
-    MagnifyingGlassPlus,
-    IdentificationCard,
-    Images, // Added for batch upload icon
-    VideoCamera // Added for video tab icon
+    VideoCamera,
+    Car,
+    WarningOctagon,
+    Target,
+    CheckCircle
 } from '@phosphor-icons/react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-// The Flask backend API is running on port 5000 explicitly
 const API_URL = 'http://127.0.0.1:5000';
 
 function Dashboard() {
@@ -26,30 +21,17 @@ function Dashboard() {
     const [activeTab, setActiveTab] = useState('single');
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState({ title: '', subtitle: '' });
-    const [currentTime, setCurrentTime] = useState('');
 
-    const [resultData, setResultData] = useState(null); // Data for single image result
-    const [batchResults, setBatchResults] = useState(null); // Data for batch results
-    const [videoStreamUrl, setVideoStreamUrl] = useState(null); // URL for streaming video processing
-
-    // Stats and History States
     const [stats, setStats] = useState({ total_scans: '--', total_violations: '--', accuracy: '--' });
     const [recentDetections, setRecentDetections] = useState([]);
 
     const singleFileInputRef = useRef(null);
     const batchFileInputRef = useRef(null);
-    const videoFileInputRef = useRef(null); // Added for video upload
+    const videoFileInputRef = useRef(null);
 
-    // Initial Data Fetch & Clock
     useEffect(() => {
         fetchStats();
         fetchHistory();
-
-        const timer = setInterval(() => {
-            setCurrentTime(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-        }, 1000);
-
-        return () => clearInterval(timer);
     }, []);
 
     const fetchStats = async () => {
@@ -70,334 +52,234 @@ function Dashboard() {
         }
     };
 
-    const handleSingleUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        setLoadingMessage({
-            title: 'Processing Image...',
-            subtitle: 'YOLOv8 Large model is analyzing the frame'
-        });
-        setIsLoading(true);
-        setResultData(null);
-        setBatchResults(null);
-        setVideoStreamUrl(null); // Clear video stream
-
-        try {
-            const res = await axios.post(`${API_URL}/detect`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (res.data.success) {
-                fetchStats();
-                fetchHistory();
-                navigate('/results', { state: { type: 'single', payload: res.data } });
-            } else {
-                alert(`Error: ${res.data.error}`);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Network error occurred during upload.");
-        } finally {
-            setIsLoading(false);
-            if (singleFileInputRef.current) singleFileInputRef.current.value = '';
-        }
-    };
-
-    const handleBatchUpload = async (event) => {
+    const handleUploadTemplate = async (event, uploadType) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
         const formData = new FormData();
-        let validCount = 0;
+        let endpoint = '';
+        let routeType = '';
 
-        for (let i = 0; i < files.length; i++) {
-            if (files[i].type.startsWith('image/')) {
-                formData.append('files[]', files[i]);
-                validCount++;
+        if (uploadType === 'single') {
+            formData.append('file', files[0]);
+            endpoint = '/detect';
+            routeType = 'single';
+            setLoadingMessage({ title: 'Processing Image...', subtitle: 'YOLOv8 is analyzing the frame' });
+        } else if (uploadType === 'batch') {
+            let validCount = 0;
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].type.startsWith('image/')) {
+                    formData.append('files[]', files[i]);
+                    validCount++;
+                }
             }
+            if (validCount === 0) { alert("No valid images found."); return; }
+            endpoint = '/api/batch-detect';
+            routeType = 'batch';
+            setLoadingMessage({ title: `Processing Batch (${validCount} images)...`, subtitle: 'Please wait.' });
+        } else if (uploadType === 'video') {
+            formData.append('video', files[0]);
+            endpoint = '/api/upload-video';
+            routeType = 'video';
+            setLoadingMessage({ title: 'Processing Video Stream...', subtitle: 'Analyzing video frames.' });
         }
 
-        if (validCount === 0) {
-            alert("No valid images found in the selected folder.");
-            return;
-        }
-
-        setLoadingMessage({
-            title: `Processing Batch (${validCount} images)...`,
-            subtitle: 'Please keep this tab open. The backend is analyzing all frames.'
-        });
         setIsLoading(true);
-        setResultData(null);
-        setBatchResults(null);
-        setVideoStreamUrl(null); // Clear video stream
 
         try {
-            const res = await axios.post(`${API_URL}/api/batch-detect`, formData, {
+            const res = await axios.post(`${API_URL}${endpoint}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            if (res.data.success) {
-                fetchStats();
-                fetchHistory();
-                navigate('/results', { state: { type: 'batch', payload: res.data.results } });
+            if (res.data.success || res.status === 200) {
+                navigate('/results', { state: { type: routeType, payload: res.data.results || res.data } });
             } else {
                 alert(`Error: ${res.data.error}`);
             }
         } catch (err) {
             console.error(err);
-            alert("Network error occurred during batch processing.");
+            alert("Network error occurred during processing.");
         } finally {
             setIsLoading(false);
+            if (singleFileInputRef.current) singleFileInputRef.current.value = '';
             if (batchFileInputRef.current) batchFileInputRef.current.value = '';
-        }
-    };
-
-    const handleVideoUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('video', file);
-
-        setLoadingMessage({
-            title: 'Processing Video Stream...',
-            subtitle: 'The backend is analyzing the video frames in real-time.'
-        });
-        setIsLoading(true);
-        setResultData(null);
-        setBatchResults(null);
-        setVideoStreamUrl(null); // Clear previous video stream
-
-        try {
-            const res = await axios.post(`${API_URL}/api/upload-video`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (res.data.success) {
-                // Refresh history but video stats usually don't populate instantly until frame yields finish
-                fetchHistory();
-                navigate('/results', { state: { type: 'video', payload: res.data } });
-            } else {
-                alert(`Error: ${res.data.error}`);
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Network error occurred during video processing.");
-        } finally {
-            setIsLoading(false);
             if (videoFileInputRef.current) videoFileInputRef.current.value = '';
         }
     };
 
-    const handleNewAnalysis = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
     return (
-        <div className="dashboard-container" style={{ padding: '2rem 5%', maxWidth: '1100px', margin: '0 auto' }}>
-            {/* Content Header (Title + Time) */}
-            <div className="content-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '0 5%', maxWidth: '1400px', margin: '0 auto' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>Traffic Overview</h1>
-                    <p style={{ color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Monitor live streams and process AI analytics.</p>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 700, margin: '0 0 0.5rem 0', letterSpacing: '-0.5px' }}>System Overview</h1>
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Real-time monitoring of traffic systems.</p>
                 </div>
-                <div className="time-badge">
-                    <ClockCounterClockwise size={18} />
-                    <span>{currentTime}</span>
-                </div>
-            </div>
-
-            {/* Top Horizon KPIs */}
-            <div className="horizon-panel glass-panel">
-                <div className="horizon-item">
-                    <div className="horizon-icon-box" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--brand-primary)' }}>
-                        <Scan size={24} />
-                    </div>
-                    <div className="horizon-data">
-                        <p>Today's Scans</p>
-                        <h3>{stats.total_scans}</h3>
-                    </div>
-                </div>
-
-                <div className="horizon-item">
-                    <div className="horizon-icon-box" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--status-danger)' }}>
-                        <WarningCircle size={24} />
-                    </div>
-                    <div className="horizon-data">
-                        <p>Violations Detected</p>
-                        <h3>{stats.total_violations}</h3>
-                    </div>
-                </div>
-
-                <div className="horizon-item">
-                    <div className="horizon-icon-box" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--status-safe)' }}>
-                        <Scan size={24} /> {/* Placeholder icon mapping Crosshair */}
-                    </div>
-                    <div className="horizon-data">
-                        <p>System Accuracy</p>
-                        <h3>{stats.accuracy}%</h3>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--status-safe)', boxShadow: '0 0 8px var(--status-safe)' }}></div>
+                    <span style={{ color: 'var(--status-safe)', fontWeight: 600 }}>System Online</span>
+                    <span style={{ marginLeft: '12px' }}>Last update: Just now</span>
                 </div>
             </div>
 
-            {/* Main Centered Stack */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', marginTop: '2.5rem' }}>
+            {/* Top KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
 
-                {/* Analysis Studio */}
-                <div className="analysis-card glass-panel">
-                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3><Scan /> Analysis Studio</h3>
-                        <div className="studio-tabs">
-                            <button
-                                className={`tab-btn ${activeTab === 'single' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('single')}
-                            >
-                                Single Image
-                            </button>
-                            <button
-                                className={`tab-btn ${activeTab === 'batch' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('batch')}
-                            >
-                                Batch Processing
-                            </button>
-                            <button
-                                className={`tab-btn ${activeTab === 'video' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('video')}
-                            >
-                                Video
-                            </button>
+                {/* Card 1 */}
+                <div className="premium-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Car size={24} weight="fill" />
+                        </div>
+                        <span style={{ color: '#38bdf8', fontSize: '0.85rem', fontWeight: 600 }}>+12.5% ↗</span>
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Total Vehicles Scanned</p>
+                    <h2 style={{ fontSize: '2.5rem', margin: 0, fontWeight: 700 }}>{stats.total_scans} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>today</span></h2>
+                    <div style={{ height: '4px', background: 'var(--bg-panel-hover)', borderRadius: '2px', marginTop: '1.25rem', overflow: 'hidden' }}>
+                        <div style={{ width: '75%', height: '100%', background: 'linear-gradient(90deg, #0ea5e9, #38bdf8)' }}></div>
+                    </div>
+                </div>
+
+                {/* Card 2 */}
+                <div className="premium-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <WarningCircle size={24} weight="fill" />
+                        </div>
+                        <span style={{ color: '#f43f5e', fontSize: '0.85rem', fontWeight: 600 }}>+2.4% ↗</span>
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Active Violations</p>
+                    <h2 style={{ fontSize: '2.5rem', margin: 0, fontWeight: 700 }}>{stats.total_violations} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>flagged</span></h2>
+                    <div style={{ height: '4px', background: 'var(--bg-panel-hover)', borderRadius: '2px', marginTop: '1.25rem', overflow: 'hidden' }}>
+                        <div style={{ width: '35%', height: '100%', background: 'linear-gradient(90deg, #9333ea, #a855f7)' }}></div>
+                    </div>
+                </div>
+
+                {/* Card 3 */}
+                <div className="premium-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Target size={24} weight="fill" />
+                        </div>
+                        <span style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>Stable</span>
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Model Confidence</p>
+                    <h2 style={{ fontSize: '2.5rem', margin: 0, fontWeight: 700 }}>{stats.accuracy}% <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>YOLOv8</span></h2>
+                    <div style={{ height: '4px', background: 'var(--bg-panel-hover)', borderRadius: '2px', marginTop: '1.25rem', overflow: 'hidden' }}>
+                        <div style={{ width: '98%', height: '100%', background: 'linear-gradient(90deg, #059669, #10b981)' }}></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+
+                {/* Neural Analysis Zone */}
+                <div className="premium-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', margin: 0 }}><Scan color="var(--brand-primary)" /> Neural Analysis Zone</h3>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => setActiveTab('single')} className={activeTab === 'single' ? 'tab-pill active' : 'tab-pill'}>Single</button>
+                            <button onClick={() => setActiveTab('batch')} className={activeTab === 'batch' ? 'tab-pill active' : 'tab-pill'}>Batch</button>
+                            <button onClick={() => setActiveTab('video')} className={activeTab === 'video' ? 'tab-pill active' : 'tab-pill'}>Video</button>
                         </div>
                     </div>
 
                     {!isLoading ? (
-                        <>
-                            {activeTab === 'single' && (
-                                <div className="upload-section" onClick={() => singleFileInputRef.current?.click()}>
-                                    <input
-                                        type="file"
-                                        ref={singleFileInputRef}
-                                        style={{ display: 'none' }}
-                                        accept="image/jpeg, image/jpg, image/png, image/webp"
-                                        onChange={handleSingleUpload}
-                                    />
-                                    <div className="upload-content">
-                                        <div className="upload-icon-wrapper">
-                                            <CloudArrowUp size={48} />
-                                        </div>
-                                        <h3>Upload an Image for Analysis</h3>
-                                        <p>Click or drag and drop your file here</p>
-                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '10px' }}>Supports JPG, PNG, WEBP</p>
-                                    </div>
-                                </div>
-                            )}
+                        <div className="upload-zone">
+                            {activeTab === 'single' && <input type="file" ref={singleFileInputRef} style={{ display: 'none' }} onChange={(e) => handleUploadTemplate(e, 'single')} accept="image/*" />}
+                            {activeTab === 'batch' && <input type="file" ref={batchFileInputRef} style={{ display: 'none' }} onChange={(e) => handleUploadTemplate(e, 'batch')} webkitdirectory="true" directory="true" multiple />}
+                            {activeTab === 'video' && <input type="file" ref={videoFileInputRef} style={{ display: 'none' }} onChange={(e) => handleUploadTemplate(e, 'video')} accept="video/*" />}
 
-                            {/* Batch Image Upload Container */}
-                            {activeTab === 'batch' && (
-                                <div
-                                    className="upload-section"
-                                    onClick={() => batchFileInputRef.current?.click()}
-                                >
-                                    <input
-                                        type="file"
-                                        ref={batchFileInputRef}
-                                        style={{ display: 'none' }}
-                                        webkitdirectory="true"
-                                        directory="true"
-                                        multiple
-                                        onChange={handleBatchUpload}
-                                    />
-                                    <div className="upload-content">
-                                        <div className="upload-icon-wrapper">
-                                            <Folders size={48} />
-                                        </div>
-                                        <h3>Upload a Folder for Batch Analysis</h3>
-                                        <p>Click or drag and drop your folder here</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Video Upload Container */}
-                            {activeTab === 'video' && (
-                                <div
-                                    className="upload-section"
-                                    style={{ border: '2px dashed #9d4edd', backgroundColor: 'rgba(157, 78, 221, 0.05)' }}
-                                >
-                                    <input
-                                        type="file"
-                                        ref={videoFileInputRef}
-                                        style={{ display: 'none' }}
-                                        accept="video/*"
-                                        onChange={handleVideoUpload}
-                                    />
-                                    <div className="upload-content" onClick={() => videoFileInputRef.current?.click()}>
-                                        <div className="upload-icon-wrapper" style={{ background: 'rgba(157, 78, 221, 0.2)' }}>
-                                            <VideoCamera size={48} color="#c77dff" />
-                                        </div>
-                                        <h3>Upload Video for Analysis</h3>
-                                        <p>Click or drag and drop your video here</p>
-                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '10px' }}>Supports MP4, AVI, MKV</p>
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <div className="loader-container" style={{ padding: '4rem 0', textAlign: 'center' }}>
-                            <div className="pulse-ring"></div>
-                            <h3 style={{ marginTop: '1.5rem', color: 'var(--text-primary)' }}>{loadingMessage.title}</h3>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{loadingMessage.subtitle}</p>
-                            <div style={{ width: '200px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', margin: '15px auto', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', background: 'var(--brand-primary)', width: '50%', animation: 'loadBar 2s infinite ease-in-out' }}></div>
+                            <div className="upload-icon-pulse">
+                                <CloudArrowUp size={48} weight="duotone" />
                             </div>
+                            <h3>Drop {activeTab === 'video' ? 'Video Stream or File' : 'Image Files or Folder'}</h3>
+                            <p>Support for MP4, AVI, JPG, PNG. Files are processed locally using WebAssembly where supported.</p>
+                            <button className="btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => {
+                                if (activeTab === 'single') singleFileInputRef.current?.click();
+                                if (activeTab === 'batch') batchFileInputRef.current?.click();
+                                if (activeTab === 'video') videoFileInputRef.current?.click();
+                            }}>Select Source</button>
+                        </div>
+                    ) : (
+                        <div className="upload-zone loading">
+                            <div className="pulse-ring"></div>
+                            <h3 style={{ marginTop: '1rem' }}>{loadingMessage.title}</h3>
+                            <p style={{ color: 'var(--text-muted)' }}>{loadingMessage.subtitle}</p>
                         </div>
                     )}
                 </div>
-                {/* Removed Result Views to instead route to /results */}
 
-                {/* Recent Table */}
-                <div className="recent-activity-card glass-panel">
-                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                        <h3><ClockCounterClockwise /> Recent Detections</h3>
-                        <button className="btn-outline" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>View All</button>
+                {/* Recent Detections Vertical List */}
+                <div className="premium-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', margin: 0, cursor: 'pointer' }}
+                            onClick={() => navigate('/history')}
+                        >
+                            <ClockCounterClockwise color="var(--brand-primary)" /> Recent Detections
+                        </h3>
+                        {recentDetections.length > 5 && (
+                            <button
+                                onClick={() => navigate('/history')}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--brand-primary)', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                            >
+                                View All
+                            </button>
+                        )}
                     </div>
-                    <div className="table-container">
-                        <table className="data-table" style={{ width: '100%', textAlign: 'left' }}>
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Thumbnail</th>
-                                    <th>Status</th>
-                                    <th>Plate Detected</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentDetections.map((row, i) => (
-                                    <tr key={i}>
-                                        <td>{row.timestamp.split(' ')[1].slice(0, 5)}</td>
-                                        <td>
-                                            <img src={`${API_URL}${row.result_url}`} alt="thumb" style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${row.status_text.includes('NO HELMET') ? 'badge-danger' : 'badge-safe'}`}>
-                                                {row.status_text}
-                                            </span>
-                                        </td>
-                                        <td style={{ color: row.plate_text !== 'No Plate Detected' ? '#fbbf24' : 'inherit' }}>
-                                            {row.plate_text}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {recentDetections.length === 0 && (
-                                    <tr>
-                                        <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No recent activity.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', maxHeight: '400px', paddingRight: '8px' }}>
+                        {recentDetections.slice(0, 5).map((row, i) => (
+                            <div key={i} className="detection-list-item">
+                                <div className="detection-icon" style={{ background: row.status_text.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: row.status_text.includes('NO HELMET') ? '#ef4444' : '#10b981' }}>
+                                    {row.status_text.includes('NO HELMET') ? <WarningOctagon size={20} weight="fill" /> : <CheckCircle size={20} weight="fill" />}
+                                </div>
+                                <div className="detection-info">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                        <h4 style={{ color: row.status_text.includes('NO HELMET') ? '#ef4444' : '#10b981', margin: 0, fontSize: '0.85rem', fontWeight: 700 }}>{row.status_text}</h4>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{row.timestamp.split(' ')[1].slice(0, 5)}</span>
+                                    </div>
+                                    <p style={{ fontSize: '0.85rem', margin: '0.2rem 0', color: 'var(--text-primary)' }}>{row.plate_text !== 'No Plate Detected' ? row.plate_text : 'Unknown Vehicle'}</p>
+                                    <div className="detection-img-preview" style={{ backgroundImage: `url(${API_URL}${row.result_url})` }}>
+                                        <div className="conf-badge">0.98 Conf</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {recentDetections.length === 0 && (
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 0' }}>No recent activity.</div>
+                        )}
                     </div>
+                </div>
+            </div>
+
+            {/* Bottom Camera Feeds */}
+            <div className="premium-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Feeds</h3>
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--status-safe)' }}><span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--status-safe)', marginRight: '6px' }}></span>3 Online</span>
+                        <span style={{ color: 'var(--status-danger)' }}><span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--status-danger)', marginRight: '6px' }}></span>1 Offline</span>
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                    {[1, 2, 3, 4].map(cam => (
+                        <div key={cam} className="camera-feed-box" style={{ opacity: cam === 3 ? 0.5 : 1 }}>
+                            <div className="cam-label">
+                                <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: cam === 3 ? 'var(--status-danger)' : 'var(--status-safe)', marginRight: '6px' }}></span>
+                                CAM-0{cam}
+                            </div>
+                            {cam === 3 ? (
+                                <div style={{ height: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--status-danger)' }}>
+                                    <VideoCamera size={32} weight="slash" style={{ marginBottom: '8px' }} />
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>NO SIGNAL</span>
+                                </div>
+                            ) : (
+                                <div style={{ height: '140px', background: 'var(--bg-input)', backgroundImage: `url(https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&q=80)`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

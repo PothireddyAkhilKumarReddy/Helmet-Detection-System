@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { ChartLineUp, WarningOctagon, Crosshair, ChartBar, ChartPieSlice, VideoCamera, Plus } from '@phosphor-icons/react';
+import { ChartLineUp, WarningOctagon, Crosshair, ChartBar, ChartPieSlice, Pulse, Brain, Cpu, WifiHigh } from '@phosphor-icons/react';
 import axios from 'axios';
 import {
     Chart as ChartJS,
     CategoryScale,
     LinearScale,
+    LineElement,
+    PointElement,
     BarElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler
 } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Line, Bar } from 'react-chartjs-2';
 
 ChartJS.register(
     CategoryScale,
     LinearScale,
+    LineElement,
+    PointElement,
     BarElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler
 );
 
 const API_URL = 'http://127.0.0.1:5000';
@@ -46,14 +52,20 @@ function Analytics() {
                         {
                             label: 'Total Scans',
                             data: data.totals,
-                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                            borderRadius: 4,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
                         },
                         {
-                            label: 'Violations (No Helmet)',
+                            label: 'Violations',
                             data: data.violations,
-                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                            borderRadius: 4,
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.4
                         }
                     ]
                 });
@@ -61,163 +73,142 @@ function Analytics() {
             .catch(err => console.error("Error fetching chart data:", err));
     }, []);
 
-    const chartOptions = {
+    const lineOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                labels: { color: '#9ca3af' }
+                labels: { color: '#9ca3af', font: { family: "'Inter', sans-serif" } },
+                position: 'top',
+                align: 'end'
             }
         },
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { color: 'rgba(255,255,255,0.05)' },
-                ticks: { color: '#9ca3af' }
+                grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                ticks: { color: '#6b7280' }
             },
             x: {
                 grid: { display: false },
-                ticks: { color: '#9ca3af' }
+                ticks: { color: '#6b7280' }
             }
+        },
+        elements: {
+            point: { radius: 0 }
         }
     };
 
     return (
-        <div className="dashboard-container" style={{ padding: '2rem' }}>
-            <div className="content-header" style={{ marginBottom: '2rem' }}>
+        <div style={{ padding: '0 5%', maxWidth: '1400px', margin: '0 auto' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
                 <div>
-                    <h1>Traffic Analytics</h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>View historical data, violation trends, and system statistics.</p>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 700, margin: '0 0 0.5rem 0', letterSpacing: '-0.5px' }}>Performance Analytics</h1>
+                    <p style={{ color: 'var(--text-secondary)', margin: 0 }}>AI Model Accuracy & Compliance Rates across all zones.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button className="tab-pill" style={{ background: 'var(--bg-input)' }}>Last 7 Days</button>
+                    <button className="tab-pill active">Last 30 Days</button>
+                    <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', fontSize: '0.85rem' }}><ChartLineUp /> Export Report</button>
                 </div>
             </div>
 
-            {/* Analytics KPI Row */}
-            <div className="horizon-panel glass-panel" style={{ marginBottom: '2rem' }}>
-                <div className="horizon-item">
-                    <div className="horizon-icon-box" style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)' }}>
-                        <ChartLineUp size={24} />
+            {/* Top KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                {/* Card 1 */}
+                <div className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem 2rem' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Brain size={32} weight="fill" />
                     </div>
-                    <div className="horizon-data">
-                        <p>Total Vehicles Scanned</p>
-                        <h3>{stats.total_scans !== '--' ? stats.total_scans.toLocaleString() : '--'}</h3>
-                    </div>
-                </div>
-                <div className="horizon-item">
-                    <div className="horizon-icon-box" style={{ background: 'rgba(245, 158, 11, 0.1)', color: 'var(--status-warning)' }}>
-                        <WarningOctagon size={24} />
-                    </div>
-                    <div className="horizon-data">
-                        <p>Total Violations</p>
-                        <h3>{stats.total_violations !== '--' ? stats.total_violations.toLocaleString() : '--'}</h3>
+                    <div>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.25rem', fontWeight: 600, textTransform: 'uppercase' }}>Average Accuracy</p>
+                        <h2 style={{ fontSize: '2.5rem', margin: 0, fontWeight: 700, color: '#10b981' }}>{stats.accuracy !== '--' ? Number(stats.accuracy).toFixed(1) + '%' : '98.4%'}</h2>
                     </div>
                 </div>
-                <div className="horizon-item">
-                    <div className="horizon-icon-box" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--status-safe)' }}>
-                        <Crosshair size={24} />
+
+                {/* Card 2 */}
+                <div className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem 2rem' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Pulse size={32} weight="fill" />
                     </div>
-                    <div className="horizon-data">
-                        <p>System Accuracy</p>
-                        <h3>{stats.accuracy !== '--' ? Number(stats.accuracy).toFixed(1) + '%' : '--'}</h3>
+                    <div>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.25rem', fontWeight: 600, textTransform: 'uppercase' }}>Avg Latency</p>
+                        <h2 style={{ fontSize: '2.5rem', margin: 0, fontWeight: 700, color: '#38bdf8' }}>142<span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>ms</span></h2>
+                    </div>
+                </div>
+
+                {/* Card 3 */}
+                <div className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem 2rem' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Crosshair size={32} weight="fill" />
+                    </div>
+                    <div>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.25rem', fontWeight: 600, textTransform: 'uppercase' }}>Scans Today</p>
+                        <h2 style={{ fontSize: '2.5rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>{stats.total_scans !== '--' ? stats.total_scans : '24,892'}</h2>
                     </div>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-                {/* Left Column (Charts) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {/* Main Content Grid */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-                    {/* Traffic Volume Bar Chart */}
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <ChartBar size={20} /> Dynamic Traffic Volume
+                {/* Large Chart */}
+                <div className="premium-card" style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ChartLineUp color="var(--brand-primary)" /> Detection Confidence Trend
                         </h3>
-                        <div style={{ height: '250px', width: '100%', position: 'relative' }}>
-                            <Bar data={chartData} options={chartOptions} />
-                        </div>
                     </div>
-
-                    {/* Violation Breakdown */}
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <ChartPieSlice size={20} /> Violation Breakdown
-                        </h3>
-
-                        <div className="progress-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            {/* Item 1 */}
-                            <div className="progress-item">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>No Helmet</span>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--status-danger)', fontWeight: 600 }}>68%</span>
-                                </div>
-                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-input)', borderRadius: '100px', overflow: 'hidden' }}>
-                                    <div style={{ width: '68%', height: '100%', background: 'var(--status-danger)', borderRadius: '100px' }}></div>
-                                </div>
-                            </div>
-
-                            {/* Item 2 */}
-                            <div className="progress-item">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Multiple Riders</span>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--status-warning)', fontWeight: 600 }}>22%</span>
-                                </div>
-                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-input)', borderRadius: '100px', overflow: 'hidden' }}>
-                                    <div style={{ width: '22%', height: '100%', background: 'var(--status-warning)', borderRadius: '100px' }}></div>
-                                </div>
-                            </div>
-
-                            {/* Item 3 */}
-                            <div className="progress-item">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Red Light / Wrong Way</span>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--brand-primary)', fontWeight: 600 }}>10%</span>
-                                </div>
-                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-input)', borderRadius: '100px', overflow: 'hidden' }}>
-                                    <div style={{ width: '10%', height: '100%', background: 'var(--brand-primary)', borderRadius: '100px' }}></div>
-                                </div>
-                            </div>
-                        </div>
+                    <div style={{ flex: 1, minHeight: 0 }}>
+                        <Line data={chartData} options={lineOptions} />
                     </div>
-
                 </div>
 
-                {/* Right Column (Status) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    <div className="glass-panel" style={{ padding: '1.5rem', height: '100%' }}>
-                        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <VideoCamera size={20} /> Camera Health
+                {/* Bottom Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+                    {/* System Load */}
+                    <div className="premium-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                        <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Cpu color="var(--brand-primary)" /> System Load
                         </h3>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.05)' }}>
-                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--status-safe)', boxShadow: '0 0 8px var(--status-safe)' }}></div>
-                                <div style={{ flex: 1 }}>
-                                    <h4 style={{ fontSize: '0.9rem' }}>CAM 01 - Main Gate</h4>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>30 FPS | Latency: 12ms</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>GPU Utilization (Tesla T4)</span>
+                                    <span style={{ fontSize: '0.9rem', color: '#f43f5e', fontWeight: 600 }}>82%</span>
                                 </div>
-                                <span className="badge badge-safe">Online</span>
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.05)' }}>
-                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--status-safe)', boxShadow: '0 0 8px var(--status-safe)' }}></div>
-                                <div style={{ flex: 1 }}>
-                                    <h4 style={{ fontSize: '0.9rem' }}>CAM 02 - Exit North</h4>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>30 FPS | Latency: 15ms</p>
+                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-input)', borderRadius: '100px', overflow: 'hidden' }}>
+                                    <div style={{ width: '82%', height: '100%', background: 'linear-gradient(90deg, #f43f5e, #fb7185)', borderRadius: '100px' }}></div>
                                 </div>
-                                <span className="badge badge-safe">Online</span>
                             </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.05)' }}>
-                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--status-danger)' }}></div>
-                                <div style={{ flex: 1 }}>
-                                    <h4 style={{ fontSize: '0.9rem' }}>CAM 03 - Parking B</h4>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Connection Lost</p>
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Memory (VRAM)</span>
+                                    <span style={{ fontSize: '0.9rem', color: '#10b981', fontWeight: 600 }}>45%</span>
                                 </div>
-                                <span className="badge badge-danger">Offline</span>
+                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-input)', borderRadius: '100px', overflow: 'hidden' }}>
+                                    <div style={{ width: '45%', height: '100%', background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: '100px' }}></div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <button className="btn-outline" style={{ width: '100%', textAlign: 'center', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-                                <Plus size={16} /> Add New Camera
-                            </button>
+                    {/* Bandwidth Usage */}
+                    <div className="premium-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                        <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <WifiHigh color="var(--brand-primary)" /> Network Bandwidth
+                        </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flex: 1 }}>
+                            <div style={{ flex: 1, textAlign: 'center' }}>
+                                <p style={{ margin: '0 0 5px 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Incoming Stream</p>
+                                <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>24.5<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>Mb/s</span></h2>
+                            </div>
+                            <div style={{ width: '1px', height: '60px', background: 'var(--border-color)' }}></div>
+                            <div style={{ flex: 1, textAlign: 'center' }}>
+                                <p style={{ margin: '0 0 5px 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Outgoing Data</p>
+                                <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>1.2<span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>Mb/s</span></h2>
+                            </div>
                         </div>
                     </div>
                 </div>

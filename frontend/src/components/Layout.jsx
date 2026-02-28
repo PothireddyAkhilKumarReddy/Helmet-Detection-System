@@ -21,10 +21,10 @@ function Layout() {
 
     return (
         <div className="top-nav-layout">
-            <header className="top-navbar glass-panel">
+            <header className="top-navbar">
                 <div className="nav-brand">
                     <div className="brand-logo">
-                        <ShieldCheck size={28} />
+                        <ShieldCheck size={28} weight="fill" />
                     </div>
                     <h2>Traffic AI</h2>
                 </div>
@@ -46,7 +46,7 @@ function Layout() {
 
                 <div className="nav-actions">
                     <button className="theme-toggle" id="theme-toggle" aria-label="Toggle Theme" onClick={toggleTheme}>
-                        {theme === 'light' ? <Moon size={20} id="theme-icon" /> : <Sun size={20} id="theme-icon" />}
+                        {theme === 'light' ? <Moon size={20} weight="fill" id="theme-icon" /> : <Sun size={20} weight="fill" id="theme-icon" />}
                     </button>
                     <div className="auth-buttons">
                         <Link to="/login" className="btn-outline">Log In</Link>
@@ -59,7 +59,7 @@ function Layout() {
                 <Outlet />
             </main>
 
-            <footer className="global-footer glass-panel">
+            <footer className="global-footer">
                 <div className="footer-content">
                     <div className="footer-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <ShieldCheck size={20} />
@@ -68,7 +68,7 @@ function Layout() {
                     <div className="footer-links">
                         <Link to="/about">About Us</Link>
                         <Link to="/terms">Terms & Conditions</Link>
-                        <a href="#">Privacy Policy</a>
+                        <Link to="#">Privacy Policy</Link>
                     </div>
                 </div>
             </footer>
