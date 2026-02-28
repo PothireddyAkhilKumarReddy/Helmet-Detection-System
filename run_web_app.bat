@@ -6,7 +6,7 @@ echo ...
 start "Flask Backend" cmd /k "cd backend && python app.py"
 
 :: Start the React UI in another new window
-start "React UI" cmd /k "cd ui && npm run dev"
+start "React UI" cmd /k "cd frontend && npm run dev"
 
 echo Both services are starting...
 echo Please ensure your browser opens to http://localhost:5173
