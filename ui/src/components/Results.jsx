@@ -14,7 +14,7 @@ function Results() {
     // payload: the JSON response data
     const { type, payload } = location.state || {};
 
-    const [videoStats, setVideoStats] = useState({ safe: 0, unsafe: 0, plates: [] });
+    const [videoStats, setVideoStats] = useState({ safe: 0, unsafe: 0, plates: [], violators: [] });
 
     // Open SSE stream for Live Video Metrics
     useEffect(() => {
@@ -159,6 +159,7 @@ function Results() {
                 </div>
             </div>
 
+            {/* Live Metrics Overlay */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
                 <div className="metric-card" style={{ padding: '1.5rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -189,6 +190,47 @@ function Results() {
                     <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Optical Character Recognition</p>
                 </div>
             </div>
+
+            {/* Live Violator Intercept Ledger */}
+            {videoStats.violators?.length > 0 && (
+                <div style={{ marginTop: '3rem' }}>
+                    <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '1.5rem', color: 'var(--status-danger)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <WarningCircle size={24} /> Intercepted Violators Log ({videoStats.violators.length})
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                        {videoStats.violators.map((v, idx) => (
+                            <div key={idx} className="metric-card is-danger" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div style={{ display: 'flex', gap: '10px', height: '120px' }}>
+                                    {/* Violator Face Crop */}
+                                    <div style={{ flex: 1, background: '#000', borderRadius: '6px', overflow: 'hidden' }}>
+                                        <img src={`${API_URL}${v.violator_image_url}`} alt="Violator Snapshot" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    </div>
+                                    {/* License Plate Crop (if available) */}
+                                    <div style={{ flex: 1, background: '#000', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {v.plate_image_url ? (
+                                            <img src={`${API_URL}${v.plate_image_url}`} alt="Plate Snapshot" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        ) : (
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No Plate Image</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Frame {v.timestamp}</span>
+                                    <span className="badge badge-danger">NO HELMET</span>
+                                </div>
+
+                                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.8rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>OCR Plate Read:</span>
+                                    <span style={{ fontWeight: 600, color: v.plate_text && v.plate_text !== 'No Text Detected' && v.plate_text !== 'No Plate Detected' ? '#fbbf24' : 'var(--text-muted)' }}>
+                                        {v.plate_text || '--'}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 

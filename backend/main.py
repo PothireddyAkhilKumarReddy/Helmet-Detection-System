@@ -145,6 +145,24 @@ class YOLOv8System:
             return
 
         frame_count = 0
+        filename = os.path.basename(video_path)
+        
+        # Initialize the global tracking structure for this video
+        STREAM_STATS[filename] = {
+            "safe": 0,
+            "unsafe": 0,
+            "plates": [],
+            "violators": []
+        }
+        
+        # Keep track of locally generated crops to avoid duplicates
+        tracked_violators = 0
+        
+        # Debounce tracking map: { "violator_idx": {"x": int, "y": int, "last_seen_frame": int} }
+        active_trackers = []
+        TRACKING_THRESHOLD_PX = 100 # How far a box can move and still be considered the "same person"
+        DEBOUNCE_FRAMES = 60 # wait this many frames before capturing the "same" violator area again
+
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -168,6 +186,11 @@ class YOLOv8System:
             safe_count = 0
             unsafe_count = 0
             plates = []
+            
+            # Temporary storage to pair up a violator and a plate in the exact same frame
+            current_frame_violator_crop = None
+            current_frame_plate_crop = None
+            current_frame_plate_text = "No Plate Detected"
 
             for box in results.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -192,15 +215,25 @@ class YOLOv8System:
                     color = (0, 0, 255) # Red
                     label = "NO HELMET"
                     unsafe_count += 1
+                    # Extract the violator crop
+                    try:
+                        current_frame_violator_crop = frame[max(0, y1-20):y2+20, max(0, x1-20):x2+20].copy()
+                    except:
+                        pass
+                        
                 elif "helmet" in lbl_lower:
                     safe_count += 1
-                elif label == "License Plate":
+                elif "plate" in lbl_lower or "license" in lbl_lower:
                     # Attempt quick OCR for the specific frame or just track detection
                     try:
-                        plate_crop = frame[y1:y2, x1:x2]
-                        pil_img = PIL.Image.fromarray(cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB))
-                        text = self.plate_detector.extract_text(pil_img)
-                        if text: plates.append(text)
+                        plate_crop = frame[max(0, y1):y2, max(0, x1):x2] # Removed .copy() reference bug 
+                        if plate_crop.size != 0:
+                            current_frame_plate_crop = plate_crop.copy()
+                            pil_img = PIL.Image.fromarray(cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB))
+                            text = self.plate_detector.extract_text(pil_img)
+                            if text: 
+                                plates.append(text)
+                                current_frame_plate_text = text
                     except:
                         pass # Ignore individual frame OCR failures for speed
 
@@ -208,13 +241,73 @@ class YOLOv8System:
                 cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                             
+            # Check Debounce & Tracking to see if this is a NEW violator or an existing one
+            is_new_violator = False
+            if current_frame_violator_crop is not None:
+                # Find center of this box
+                center_x = x1 + (x2 - x1) // 2
+                center_y = y1 + (y2 - y1) // 2
+                
+                matched = False
+                for t in active_trackers:
+                    # If the center is within 100px of an existing tracked violator
+                    if abs(t["x"] - center_x) < TRACKING_THRESHOLD_PX and abs(t["y"] - center_y) < TRACKING_THRESHOLD_PX:
+                        matched = True
+                        t["x"] = center_x
+                        t["y"] = center_y
+                        
+                        # Only re-capture if it's been a long time (e.g. they left and another came to the exact same spot)
+                        if (frame_count - t["last_seen_frame"]) > DEBOUNCE_FRAMES:
+                            is_new_violator = True
+                            t["last_seen_frame"] = frame_count
+                        else:
+                            # Just update the timer so they stay "active" while in frame
+                            t["last_seen_frame"] = frame_count
+                        break
+                        
+                if not matched:
+                    # Brand new person
+                    is_new_violator = True
+                    active_trackers.append({
+                        "x": center_x,
+                        "y": center_y,
+                        "last_seen_frame": frame_count
+                    })
+
+            # If we caught a NEW violator in this frame, save the crops and update the ledger
+            if is_new_violator:
+                results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
+                os.makedirs(results_dir, exist_ok=True)
+                
+                violator_fname = f"v_{filename}_f{frame_count}_{tracked_violators}.jpg"
+                violator_path = os.path.join(results_dir, violator_fname)
+                cv2.imwrite(violator_path, current_frame_violator_crop)
+                
+                plate_url = None
+                if current_frame_plate_crop is not None:
+                    plate_fname = f"p_{filename}_f{frame_count}_{tracked_violators}.jpg"
+                    plate_path = os.path.join(results_dir, plate_fname)
+                    cv2.imwrite(plate_path, current_frame_plate_crop)
+                    plate_url = f"/results/{plate_fname}"
+                
+                # Append to SSE structure
+                STREAM_STATS[filename]["violators"].append({
+                    "timestamp": frame_count,
+                    "violator_image_url": f"/results/{violator_fname}",
+                    "plate_image_url": plate_url,
+                    "plate_text": current_frame_plate_text,
+                    "status_text": "NO HELMET"
+                })
+                tracked_violators += 1
+                            
+            # Clean up old trackers that left the frame long ago
+            active_trackers = [t for t in active_trackers if (frame_count - t["last_seen_frame"]) < DEBOUNCE_FRAMES]
+                            
             # Update global stats for SSE
-            filename = os.path.basename(video_path)
-            STREAM_STATS[filename] = {
-                "safe": safe_count,
-                "unsafe": unsafe_count,
-                "plates": plates if plates else ["No Text Detected"]
-            }
+            STREAM_STATS[filename]["safe"] = safe_count
+            STREAM_STATS[filename]["unsafe"] = unsafe_count
+            if plates:
+                 STREAM_STATS[filename]["plates"] = plates
 
             # Encode frame to JPEG
             ret, buffer = cv2.imencode('.jpg', frame)
