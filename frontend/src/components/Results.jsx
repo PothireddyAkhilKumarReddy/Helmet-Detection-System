@@ -269,9 +269,9 @@ function Results() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
                 {payload.map((res, idx) => (
                     <div key={idx} className="premium-card" style={{ padding: '1rem', border: `1px solid ${res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}` }}>
-                        <div style={{ display: 'flex', gap: '10px', height: '140px', marginBottom: '1rem' }}>
-                            <div style={{ flex: 1, background: '#000', borderRadius: '6px', overflow: 'hidden' }}>
-                                <img src={`${API_URL}${res.result_url}`} alt="Out" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <div style={{ display: 'flex', gap: '10px', height: '180px', marginBottom: '1rem' }}>
+                            <div style={{ flex: 1, background: 'transparent', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <img src={`${API_URL}${res.result_url}`} alt="Out" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }} />
                             </div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>

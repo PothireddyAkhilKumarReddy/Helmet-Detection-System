@@ -93,14 +93,18 @@ class YOLOv8System:
                      is_violation = True
                      violation_detected = True
                      print(f"[VIOLATION] No Helmet detected! ({conf:.2f})")
-                else:
-                     # "helmet" or "with helmet"
-                     # STRICT FILTER: Only accept if confidence is HIGH (>0.7)
-                     # This reduces false positives where hair is detected as a helmet
-                     if conf > 0.7:
+                     # STRICT FILTER: Only accept if confidence is HIGH (>0.7), and bounding box represents a head size
+                     h, w_img = img.shape[:2]
+                     box_w = x2 - x1
+                     box_h = y2 - y1
+                     aspect_ratio = box_w / box_h if box_h > 0 else 0
+                     h_ratio = box_h / h if h > 0 else 0
+
+                     if conf > 0.65 and 0.5 < aspect_ratio < 2.0 and h_ratio < 0.6:
                          helmet_detected = True
                      else:
-                         print(f"[IGNORED] Weak Helmet detection ({conf:.2f}), treating as potentially unsafe.")
+                         print(f"[IGNORED] Weak/False Helmet detection ({conf:.2f}, ar={aspect_ratio:.2f}, h={h_ratio:.2f})")
+                         continue # skip drawing this false positive bounding box
 
             elif "head" in lbl_lower:
                 # If the class is "Head", it usually means NO helmet
@@ -207,6 +211,17 @@ class YOLOv8System:
                 elif "helmet" in lbl_lower:
                     if "no" in lbl_lower or "without" in lbl_lower or "missing" in lbl_lower or "not" in lbl_lower:
                          is_violation = True
+                    else:
+                         h_img = frame.shape[0]
+                         box_w = x2 - x1
+                         box_h = y2 - y1
+                         aspect_ratio = box_w / box_h if box_h > 0 else 0
+                         h_ratio = box_h / h_img if h_img > 0 else 0
+                         
+                         if conf > 0.65 and 0.5 < aspect_ratio < 2.0 and h_ratio < 0.6:
+                             safe_count += 1
+                         else:
+                             continue # Skip False Positive logic
                 elif "head" in lbl_lower:
                     if "helmet" not in lbl_lower:
                         is_violation = True

@@ -204,8 +204,10 @@ function Dashboard() {
                         </div>
                     ) : (
                         <div className="upload-zone loading">
-                            <div className="pulse-ring"></div>
-                            <h3 style={{ marginTop: '1rem' }}>{loadingMessage.title}</h3>
+                            <div className="upload-icon-pulse loading-pulse">
+                                <CloudArrowUp size={48} weight="duotone" color="var(--brand-primary)" />
+                            </div>
+                            <h3>{loadingMessage.title}</h3>
                             <p style={{ color: 'var(--text-muted)' }}>{loadingMessage.subtitle}</p>
                         </div>
                     )}

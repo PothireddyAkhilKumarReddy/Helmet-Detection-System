@@ -378,24 +378,25 @@ body {
 .upload-icon-pulse::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
     border-radius: 50%;
     border: 2px solid var(--brand-primary);
-    animation: pulseRing 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    animation: staticPulse 2s ease-out infinite;
     opacity: 0;
+    pointer-events: none;
 }
 
-@keyframes pulseRing {
+@keyframes staticPulse {
     0% {
-        transform: scale(1);
-        opacity: 0.5;
+        transform: scale(0.6);
+        opacity: 0.6;
     }
 
     100% {
-        transform: scale(1.5);
+        transform: scale(1.0);
         opacity: 0;
     }
 }
@@ -525,30 +526,7 @@ body {
     color: var(--brand-primary);
 }
 
-.scanner-line {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: var(--brand-primary);
-    box-shadow: 0 0 10px var(--brand-primary);
-    animation: scan 1.5s cubic-bezier(0.53, 0.21, 0.29, 0.67) infinite alternate;
-    z-index: 2;
-}
 
-.pulse-ring {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
-    height: 100px;
-    border: 2px solid var(--brand-primary);
-    border-radius: 50%;
-    animation: pulseRing 2s ease-out infinite;
-    opacity: 0;
-}
 
 /* =========================================
    Results Section
