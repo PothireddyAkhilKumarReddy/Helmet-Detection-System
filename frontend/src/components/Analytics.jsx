@@ -27,7 +27,7 @@ ChartJS.register(
     Filler
 );
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = 'http://127.0.0.1:5001';
 
 function Analytics() {
     const [stats, setStats] = useState({ total_scans: '--', total_violations: '--', accuracy: '--' });

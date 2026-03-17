@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CaretLeft, CheckCircle, WarningCircle, IdentificationCard, DownloadSimple, VideoCamera, Images, Scan, Camera, CornersOut, Flag, Pause, Play, SkipBack, SkipForward, SquaresFour } from '@phosphor-icons/react';
 import '../index.css';
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = 'http://127.0.0.1:5001';
 
 function Results() {
     const location = useLocation();
@@ -264,28 +264,37 @@ function Results() {
     );
 
     const renderBatchResults = () => (
-        <div style={{ padding: '1rem 5%', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ padding: '1rem 5%', maxWidth: '1600px', margin: '0 auto' }}>
             {renderHeader('Batch Analysis Report', 'Processed directory of images via YOLOv8 WebAssembly.')}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                {payload.map((res, idx) => (
-                    <div key={idx} className="premium-card" style={{ padding: '1rem', border: `1px solid ${res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}` }}>
-                        <div style={{ display: 'flex', gap: '10px', height: '180px', marginBottom: '1rem' }}>
-                            <div style={{ flex: 1, background: 'transparent', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <img src={`${API_URL}${res.result_url}`} alt="Out" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+            <div className="premium-card" style={{ padding: '1.5rem', background: 'var(--bg-panel)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Images color="var(--brand-primary)" weight="fill" />
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Grid Analysis Viewer ({payload.length} images)</span>
+                    </div>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem' }}>
+                    {payload.map((res, idx) => (
+                        <div key={idx} style={{ background: '#000', borderRadius: '8px', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ position: 'relative', width: '100%', height: '180px', background: '#111' }}>
+                                <img src={`${API_URL}${res.result_url}`} alt="Out" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            </div>
+                            <div style={{ padding: '0.75rem', background: 'var(--bg-input)', display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: `2px solid ${res.status_text?.includes('NO HELMET') ? '#ef4444' : '#10b981'}` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'white', fontWeight: '500', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '60%' }}>{res.filename}</span>
+                                    <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)', color: res.status_text?.includes('NO HELMET') ? '#ef4444' : '#10b981' }}>
+                                        {res.status_text?.split('(')[0]?.trim() || "N/A"}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Plate:</span>
+                                    <span style={{ fontWeight: 600, color: res.plate_text !== 'No Plate Detected' ? '#fbbf24' : 'var(--text-muted)', fontSize: '0.75rem' }}>{res.plate_text || '--'}</span>
+                                </div>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{res.filename}</span>
-                            <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, background: res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: res.status_text?.includes('NO HELMET') ? '#ef4444' : '#10b981' }}>
-                                {res.status_text?.split('(')[0]?.trim()}
-                            </span>
-                        </div>
-                        <div style={{ background: 'var(--bg-input)', padding: '0.5rem 0.8rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Plate OCR:</span>
-                            <span style={{ fontWeight: 600, color: res.plate_text !== 'No Plate Detected' ? '#fbbf24' : 'var(--text-muted)', fontSize: '0.85rem' }}>{res.plate_text || '--'}</span>
-                        </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         </div>
     );

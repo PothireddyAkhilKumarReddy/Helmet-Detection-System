@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ClockCounterClockwise, WarningOctagon, CheckCircle, MagnifyingGlass, Funnel, DownloadSimple } from '@phosphor-icons/react';
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = 'http://127.0.0.1:5001';
 
 function History() {
     const [historyData, setHistoryData] = useState([]);
