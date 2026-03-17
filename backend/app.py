@@ -214,6 +214,71 @@ def batch_detect():
             except Exception as e:
                 print(f"[ERROR] Batch logic error on {filename}: {e}")
                 results.append({'filename': filename, 'success': False, 'error': str(e)})
+
+    if results:
+        import cv2
+        import numpy as np
+        import time
+        
+        cell_w, cell_h = 600, 500
+        cols = 4
+        rows = (len(results) + cols - 1) // cols
+        
+        grid_h = rows * cell_h
+        grid_w = cols * cell_w
+        
+        grid_img = np.zeros((grid_h, grid_w, 3), dtype=np.uint8)
+        grid_img.fill(240) # light gray background
+        
+        for i, r in enumerate(results):
+            if r.get('success'):
+                img_path = r['result_url'].split('?')[0].replace('/results/', '')
+                full_path = os.path.join(app.config['RESULTS_FOLDER'], os.path.basename(img_path))
+                if os.path.exists(full_path):
+                    img = cv2.imread(full_path)
+                    if img is not None:
+                        margin = 15
+                        # Allocate more space (90px) at the bottom for text
+                        img_resized = cv2.resize(img, (cell_w - margin*2, cell_h - margin*2 - 90)) 
+                        
+                        row = i // cols
+                        col = i % cols
+                        
+                        x1 = col * cell_w + margin
+                        y1 = row * cell_h + margin
+                        x2 = x1 + cell_w - margin*2
+                        y2 = y1 + cell_h - margin*2 - 90
+                        
+                        grid_img[y1:y2, x1:x2] = img_resized
+                        
+                        font = cv2.FONT_HERSHEY_SIMPLEX
+                        status = r.get('status_text', '').split('(')[0].strip()
+                        plate = r.get('plate_text', '')
+                        filename_short = r.get('filename', '')[:25]
+                        
+                        color = (0, 0, 255) if "NO HELMET" in status else (0, 150, 0)
+                        
+                        # Spread out the text vertically to prevent overlapping 
+                        cv2.putText(grid_img, f"File: {filename_short}", (x1, y2 + 25), font, 0.6, (0, 0, 0), 1)
+                        cv2.putText(grid_img, f"Status: {status}", (x1, y2 + 55), font, 0.7, color, 2)
+                        
+                        if plate and plate != "No Plate Detected":
+                            cv2.putText(grid_img, f"Plate: {plate}", (x1, y2 + 85), font, 0.65, (200, 100, 0), 2)
+                        else:
+                            cv2.putText(grid_img, "Plate: None", (x1, y2 + 85), font, 0.65, (150, 150, 150), 1)
+                        
+        grid_filename = f"batch_grid_{int(time.time()*1000)}.jpg"
+        grid_filepath = os.path.join(app.config['RESULTS_FOLDER'], grid_filename)
+        cv2.imwrite(grid_filepath, grid_img)
+        
+        # Override results list to just be the single stitched image
+        results = [{
+            'filename': 'batch_stitched_output.jpg',
+            'success': True,
+            'result_url': f'/results/{grid_filename}?v={int(time.time()*1000)}',
+            'status_text': 'Batch Analysis Grid Matrix',
+            'plate_text': 'Multiple OCRs Compiled'
+        }]
                 
     return jsonify({
         'success': True,

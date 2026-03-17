@@ -20,6 +20,7 @@ function Dashboard() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('single');
     const [isLoading, setIsLoading] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState({ title: '', subtitle: '' });
 
     const [stats, setStats] = useState({ total_scans: '--', total_violations: '--', accuracy: '--' });
@@ -186,7 +187,22 @@ function Dashboard() {
                     </div>
 
                     {!isLoading ? (
-                        <div className="upload-zone">
+                        <div 
+                            className={`upload-zone ${isDragging ? 'drag-active' : ''}`}
+                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                            onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                setIsDragging(false);
+                                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                    handleUploadTemplate({ target: { files: e.dataTransfer.files } }, activeTab);
+                                }
+                            }}
+                            style={{ 
+                                borderColor: isDragging ? 'var(--brand-primary)' : 'var(--border-color)',
+                                background: isDragging ? 'var(--bg-panel-hover)' : 'transparent'
+                            }}
+                        >
                             {activeTab === 'single' && <input type="file" ref={singleFileInputRef} style={{ display: 'none' }} onChange={(e) => handleUploadTemplate(e, 'single')} accept="image/*" />}
                             {activeTab === 'batch' && <input type="file" ref={batchFileInputRef} style={{ display: 'none' }} onChange={(e) => handleUploadTemplate(e, 'batch')} webkitdirectory="true" directory="true" multiple />}
                             {activeTab === 'video' && <input type="file" ref={videoFileInputRef} style={{ display: 'none' }} onChange={(e) => handleUploadTemplate(e, 'video')} accept="video/*" />}

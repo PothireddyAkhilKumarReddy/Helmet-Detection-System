@@ -93,14 +93,15 @@ class YOLOv8System:
                      is_violation = True
                      violation_detected = True
                      print(f"[VIOLATION] No Helmet detected! ({conf:.2f})")
-                     # STRICT FILTER: Only accept if confidence is HIGH (>0.7), and bounding box represents a head size
+                else:
+                     # STRICT FILTER: Only accept if confidence is HIGH, and bounding box represents a head size
                      h, w_img = img.shape[:2]
                      box_w = x2 - x1
                      box_h = y2 - y1
                      aspect_ratio = box_w / box_h if box_h > 0 else 0
                      h_ratio = box_h / h if h > 0 else 0
 
-                     if conf > 0.65 and 0.5 < aspect_ratio < 2.0 and h_ratio < 0.6:
+                     if conf > 0.35 and 0.2 < aspect_ratio < 4.0:
                          helmet_detected = True
                      else:
                          print(f"[IGNORED] Weak/False Helmet detection ({conf:.2f}, ar={aspect_ratio:.2f}, h={h_ratio:.2f})")
@@ -218,7 +219,7 @@ class YOLOv8System:
                          aspect_ratio = box_w / box_h if box_h > 0 else 0
                          h_ratio = box_h / h_img if h_img > 0 else 0
                          
-                         if conf > 0.65 and 0.5 < aspect_ratio < 2.0 and h_ratio < 0.6:
+                         if conf > 0.65 and 0.5 < aspect_ratio < 2.0 and h_ratio < 0.5:
                              safe_count += 1
                          else:
                              continue # Skip False Positive logic

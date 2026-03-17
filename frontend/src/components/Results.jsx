@@ -263,32 +263,54 @@ function Results() {
         </div>
     );
 
-    const renderBatchResults = () => (
-        <div style={{ padding: '1rem 5%', maxWidth: '1400px', margin: '0 auto' }}>
-            {renderHeader('Batch Analysis Report', 'Processed directory of images via YOLOv8 WebAssembly.')}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                {payload.map((res, idx) => (
-                    <div key={idx} className="premium-card" style={{ padding: '1rem', border: `1px solid ${res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}` }}>
-                        <div style={{ display: 'flex', gap: '10px', height: '180px', marginBottom: '1rem' }}>
-                            <div style={{ flex: 1, background: 'transparent', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <img src={`${API_URL}${res.result_url}`} alt="Out" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }} />
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{res.filename}</span>
-                            <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, background: res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: res.status_text?.includes('NO HELMET') ? '#ef4444' : '#10b981' }}>
-                                {res.status_text?.split('(')[0]?.trim()}
+    const renderBatchResults = () => {
+        const isStitched = payload.length === 1 && payload[0].filename === 'batch_stitched_output.jpg';
+
+        return (
+            <div style={{ padding: '1rem 5%', maxWidth: '100%', margin: '0 auto' }}>
+                {renderHeader('Batch Analysis Report', 'Processed directory of images via YOLOv8 WebAssembly.')}
+                
+                {isStitched ? (
+                    <div className="premium-card" style={{ padding: '0', background: 'var(--bg-panel)', overflow: 'hidden' }}>
+                        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Images color="var(--brand-primary)" weight="fill" />
+                                {payload[0].status_text}
                             </span>
+                            <button className="btn-outline" style={{ padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <DownloadSimple size={18} /> Export Grid
+                            </button>
                         </div>
-                        <div style={{ background: 'var(--bg-input)', padding: '0.5rem 0.8rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Plate OCR:</span>
-                            <span style={{ fontWeight: 600, color: res.plate_text !== 'No Plate Detected' ? '#fbbf24' : 'var(--text-muted)', fontSize: '0.85rem' }}>{res.plate_text || '--'}</span>
+                        <div style={{ position: 'relative', width: '100%', minHeight: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff', borderRadius: '0 0 12px 12px', padding: '1rem' }}>
+                            <img src={`${API_URL}${payload[0].result_url}`} alt="Batch Grid Matrix" style={{ width: '100%', height: 'auto', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
                         </div>
                     </div>
-                ))}
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                        {payload.map((res, idx) => (
+                            <div key={idx} className="premium-card" style={{ padding: '1rem', border: `1px solid ${res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}` }}>
+                                <div style={{ display: 'flex', gap: '10px', height: '180px', marginBottom: '1rem' }}>
+                                    <div style={{ flex: 1, background: 'transparent', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <img src={`${API_URL}${res.result_url}`} alt="Out" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{res.filename}</span>
+                                    <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, background: res.status_text?.includes('NO HELMET') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: res.status_text?.includes('NO HELMET') ? '#ef4444' : '#10b981' }}>
+                                        {res.status_text?.split('(')[0]?.trim()}
+                                    </span>
+                                </div>
+                                <div style={{ background: 'var(--bg-input)', padding: '0.5rem 0.8rem', borderRadius: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Plate OCR:</span>
+                                    <span style={{ fontWeight: 600, color: res.plate_text !== 'No Plate Detected' ? '#fbbf24' : 'var(--text-muted)', fontSize: '0.85rem' }}>{res.plate_text || '--'}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="results-wrapper" style={{ paddingBottom: '3rem' }}>

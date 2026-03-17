@@ -7,6 +7,8 @@ const API_URL = 'http://127.0.0.1:5000';
 function History() {
     const [historyData, setHistoryData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, SAFE, VIOLATION
 
     useEffect(() => {
         fetchHistory();
@@ -24,6 +26,52 @@ function History() {
         }
     };
 
+    const handleExportCSV = () => {
+        if (filteredData.length === 0) return;
+
+        const headers = ['Status', 'Timestamp', 'License Plate', 'Confidence', 'Image URL'];
+        const csvRows = [headers.join(',')];
+
+        filteredData.forEach(row => {
+            const status = row.status_text;
+            const time = row.timestamp;
+            const plate = row.plate_text !== 'No Plate Detected' ? row.plate_text : 'N/A';
+            const conf = '0.98';
+            const url = `${API_URL}${row.result_url}`;
+
+            csvRows.push(`"${status}","${time}","${plate}","${conf}","${url}"`);
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `traffic_history_${new Date().getTime()}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    const filteredData = historyData.filter(row => {
+        // Search text matching
+        const matchesSearch =
+            row.plate_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            row.status_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            row.timestamp.includes(searchQuery);
+
+        // Status matching
+        let matchesStatus = true;
+        if (filterStatus === 'SAFE') {
+            matchesStatus = !row.status_text.includes("NO HELMET") && !row.status_text.includes("No Rider");
+        } else if (filterStatus === 'VIOLATION') {
+            matchesStatus = row.status_text.includes("NO HELMET");
+        }
+
+        return matchesSearch && matchesStatus;
+    });
+
     return (
         <div style={{ padding: '0 5%', maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
@@ -40,15 +88,24 @@ function History() {
                         <input
                             type="text"
                             placeholder="Search plates..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="premium-card"
                             style={{ padding: '10px 16px 10px 40px', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', background: 'var(--bg-panel)', width: '250px' }}
                         />
                         <MagnifyingGlass size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     </div>
-                    <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px' }}>
-                        <Funnel size={18} /> Filter
-                    </button>
-                    <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px' }}>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className="btn-outline"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px', appearance: 'none', cursor: 'pointer', background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+                    >
+                        <option value="ALL">All Status</option>
+                        <option value="VIOLATION">Violations Only</option>
+                        <option value="SAFE">Safe Riders</option>
+                    </select>
+                    <button onClick={handleExportCSV} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px' }}>
                         <DownloadSimple size={18} /> Export CSV
                     </button>
                 </div>
@@ -73,14 +130,14 @@ function History() {
                                     Loading history...
                                 </td>
                             </tr>
-                        ) : historyData.length === 0 ? (
+                        ) : filteredData.length === 0 ? (
                             <tr>
                                 <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    No detections logged yet.
+                                    No records match your search criteria.
                                 </td>
                             </tr>
                         ) : (
-                            historyData.map((row, i) => {
+                            filteredData.map((row, i) => {
                                 const isViolation = row.status_text.includes('NO HELMET');
                                 return (
                                     <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-panel-hover)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
